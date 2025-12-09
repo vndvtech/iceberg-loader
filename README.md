@@ -4,6 +4,7 @@ Utilities for loading data into Iceberg tables using PyArrow. This library provi
 
 [![PyPI - Version](https://img.shields.io/pypi/v/iceberg-loader.svg)](https://pypi.org/project/iceberg-loader)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/iceberg-loader.svg)](https://pypi.org/project/iceberg-loader)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/iceberg-loader.svg)](https://pypi.org/project/iceberg-loader)
 [![Coverage](https://img.shields.io/badge/coverage-93%25-brightgreen)](coverage.xml)
 [![CI](https://github.com/IvanMatveev/iceberg-loader/actions/workflows/ci.yml/badge.svg)](https://github.com/IvanMatveev/iceberg-loader/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -48,14 +49,50 @@ Test build (TestPyPI) with dependencies from PyPI:
 pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple "iceberg-loader[all]==0.0.1"
 ```
 
-Use Python 3.12 (recommended; supported range 3.10–3.12).
+**Important**: Requires Python 3.10, 3.11, or 3.12 (3.12 recommended). Python 3.13+ is not yet supported due to PyArrow compatibility.
 
 ### Quick setup with uv
+
 ```bash
+# Create virtual environment with Python 3.12
 uv venv --python 3.12 .venv
-source .venv/bin/activate
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install from PyPI
 uv pip install "iceberg-loader[all]"
+
+# Or install from TestPyPI
+uv pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ "iceberg-loader[all]==0.0.1"
 ```
+
+**Troubleshooting `uv` installation issues**:
+
+If `uv pip install` fails, common causes are:
+
+1. **Python version incompatibility**: You're using Python 3.13+ or 3.9-
+   ```bash
+   python --version  # Should be 3.10, 3.11, or 3.12
+   uv venv --python 3.12  # Force specific version
+   ```
+
+2. **Missing extras syntax**: `uv` may have issues with complex extras like `[hive,s3fs]`
+   ```bash
+   # Try installing dependencies separately
+   uv pip install "iceberg-loader"
+   uv pip install "pyiceberg[hive,s3fs]"
+   ```
+
+3. **Index issues with TestPyPI**: Ensure both indexes are specified
+   ```bash
+   uv pip install --index-url https://test.pypi.org/simple/ \
+     --extra-index-url https://pypi.org/simple/ \
+     "iceberg-loader[all]"
+   ```
+
+4. **Fallback to pip**: `uv` is still evolving, `pip` is always reliable
+   ```bash
+   pip install "iceberg-loader[all]"
+   ```
 
 ## Usage
 
@@ -371,6 +408,16 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, codi
 hatch run lint
 hatch run test
 ```
+
+## Contributors
+
+Thanks to all contributors who have helped make this project better!
+
+<a href="https://github.com/IvanMatveev/iceberg-loader/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=IvanMatveev/iceberg-loader" />
+</a>
+
+Made with [contrib.rocks](https://contrib.rocks).
 
 ## License
 

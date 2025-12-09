@@ -5,6 +5,9 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+  schedule:
+    # Run tests weekly on Monday at 00:00 UTC to catch dependency issues
+    - cron: '0 0 * * 1'
 
 jobs:
   build:
