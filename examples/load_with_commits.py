@@ -34,10 +34,10 @@ def run_example():
         pass
 
     logger.info('Starting load with commit_interval=5...')
-    
+
     # We will load 20 batches, committing every 5 batches.
     # This means we expect roughly 4 snapshots (transactions) to be created.
-    
+
     result = load_batches_to_iceberg(
         batch_iterator=generate_batches(num_batches=20, batch_size=100),
         table_identifier=table_id,
@@ -52,18 +52,17 @@ def run_example():
     table = catalog.load_table(table_id)
     snapshots = list(table.snapshots())
     logger.info('Table has %d snapshots (commits)', len(snapshots))
-    
+
     # We expect 4 snapshots if 20 batches / 5 interval = 4 commits.
     # (Assuming no other operations interfered)
     for i, snap in enumerate(snapshots):
-        logger.info('Snapshot %d: ID=%s, Timestamp=%s', i+1, snap.snapshot_id, snap.timestamp_ms)
+        logger.info('Snapshot %d: ID=%s, Timestamp=%s', i + 1, snap.snapshot_id, snap.timestamp_ms)
 
     # Read back count
     total_rows = len(table.scan().to_arrow())
     logger.info('Total rows in table: %d', total_rows)
-    assert total_rows == 2000, f"Expected 2000 rows, got {total_rows}"
+    assert total_rows == 2000, f'Expected 2000 rows, got {total_rows}'
 
 
 if __name__ == '__main__':
     run_example()
-

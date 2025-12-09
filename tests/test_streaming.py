@@ -28,7 +28,7 @@ class TestStreaming(unittest.TestCase):
         mock_catalog.load_table.side_effect = [NoSuchTableError, mock_table]
 
         loader = IcebergLoader(mock_catalog)
-        expected_iceberg_schema = loader._convert_arrow_to_iceberg_schema(schema)
+        expected_iceberg_schema = loader.schema_manager._arrow_to_iceberg(schema)
         mock_table.schema.return_value = expected_iceberg_schema
         result = loader.load_ipc_stream(
             stream_source=sink,

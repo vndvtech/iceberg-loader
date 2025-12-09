@@ -1,7 +1,6 @@
 import logging
 
 from pyiceberg.catalog.hive import HiveCatalog
-
 from settings import settings
 
 logger = logging.getLogger(__name__)
@@ -19,7 +18,7 @@ def get_catalog():
     }
 
     logger.info('Initializing Iceberg catalog: %s', settings.HIVE_URI)
-    
+
     return HiveCatalog(
         name='default',
         uri=settings.HIVE_URI,

@@ -47,7 +47,7 @@ def _create_table_native(data: list[dict[str, Any]]) -> pa.Table:
 
     arrays = []
     fields = []
-    
+
     # Pre-allocate pool
     pool = _get_memory_pool()
 

@@ -4,9 +4,9 @@ import pyarrow as pa
 
 from iceberg_loader.arrow_utils import (
     convert_column_type,
+    convert_table_types,
     create_arrow_table_from_data,
     create_record_batches_from_dicts,
-    convert_table_types,
 )
 
 

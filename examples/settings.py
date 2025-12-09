@@ -1,10 +1,9 @@
 import os
-from pathlib import Path
 
 
 class Settings:
     """Settings for examples - uses environment variables with defaults for local setup."""
-    
+
     ENV: str = os.getenv('ENV', 'dev')
     HIVE_URI: str = os.getenv('HIVE_URI', 'thrift://localhost:9083')
     S3_ENDPOINT: str = os.getenv('S3_ENDPOINT', 'http://localhost:9000')

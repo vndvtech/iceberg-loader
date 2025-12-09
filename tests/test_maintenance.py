@@ -1,6 +1,4 @@
-from datetime import UTC, datetime, timedelta
-
-import pytest
+from datetime import UTC, datetime
 
 from iceberg_loader.maintenance import SnapshotMaintenance, expire_snapshots
 
@@ -12,24 +10,22 @@ class FakeSnapshot:
 
 
 class FakeExpire:
-    def __init__(self, table: "FakeTable") -> None:
+    def __init__(self, table: 'FakeTable') -> None:
         self.table = table
         self.cutoff_ms: int | None = None
 
-    def older_than(self, dt: datetime) -> "FakeExpire":
+    def older_than(self, dt: datetime) -> 'FakeExpire':
         self.cutoff_ms = int(dt.timestamp() * 1000)
         return self
 
     def commit(self) -> None:
         if self.cutoff_ms is None:
             return
-        self.table.snapshots_list = [
-            snap for snap in self.table.snapshots_list if snap.timestamp_ms >= self.cutoff_ms
-        ]
+        self.table.snapshots_list = [snap for snap in self.table.snapshots_list if snap.timestamp_ms >= self.cutoff_ms]
 
 
 class FakeMaintenanceOps:
-    def __init__(self, table: "FakeTable") -> None:
+    def __init__(self, table: 'FakeTable') -> None:
         self.table = table
 
     def expire_snapshots(self) -> FakeExpire:
@@ -51,7 +47,7 @@ class FakeTable:
         return self.snapshots_list[-1] if self.snapshots_list else None
 
     def name(self):
-        return "fake_table"
+        return 'fake_table'
 
 
 def test_expire_keep_last_one():
@@ -121,4 +117,3 @@ def test_keep_last_negative_skips():
     table = FakeTable(snapshots)
     SnapshotMaintenance().expire_snapshots(table, keep_last=-1)
     assert len(table.snapshots_list) == 2
-
