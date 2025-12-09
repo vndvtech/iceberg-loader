@@ -33,14 +33,24 @@ def create_arrow_table_from_data(data: list[dict[str, Any]]) -> pa.Table:
 
 
 def _create_table_native(data: list[dict[str, Any]]) -> pa.Table:
+    """
+    Manually constructs Arrow arrays from a list of dicts.
+    Handles mixed types by falling back to string (JSON) serialization.
+    """
     if not data:
         return pa.Table.from_arrays([], schema=pa.schema([]))
 
-    all_keys = set()
-    for item in data:
-        all_keys.update(item.keys())
+    # Single pass to collect all unique keys would be better, but
+    # for simplicity and memory safety we just iterate.
+    # Optimization: using set comprehension is slightly faster than loop.
+    all_keys = set().union(*(d.keys() for d in data))
 
-    arrays, fields = [], []
+    arrays = []
+    fields = []
+    
+    # Pre-allocate pool
+    pool = _get_memory_pool()
+
     for key in all_keys:
         column_values = []
         for item in data:
@@ -51,15 +61,18 @@ def _create_table_native(data: list[dict[str, Any]]) -> pa.Table:
                 column_values.append(value)
 
         try:
-            array = pa.array(column_values, memory_pool=_get_memory_pool())
+            array = pa.array(column_values, memory_pool=pool)
+            # Use nullable=True by default for robustness
             field = pa.field(key, array.type, nullable=True)
         except (pa.ArrowInvalid, pa.ArrowTypeError):
+            # Fallback to string for mixed types
             str_values = [str(v) if v is not None else None for v in column_values]
-            array = pa.array(str_values, type=pa.string(), memory_pool=_get_memory_pool())
+            array = pa.array(str_values, type=pa.string(), memory_pool=pool)
             field = pa.field(key, pa.string(), nullable=True)
 
+        # Handle all-null columns
         if pa.types.is_null(array.type):
-            array = pa.nulls(len(column_values), type=pa.string(), memory_pool=_get_memory_pool())
+            array = pa.nulls(len(column_values), type=pa.string(), memory_pool=pool)
             field = pa.field(key, pa.string(), nullable=True)
 
         arrays.append(array)
@@ -69,6 +82,7 @@ def _create_table_native(data: list[dict[str, Any]]) -> pa.Table:
 
 
 def convert_column_type(column: pa.Array, target_type: pa.DataType, column_name: str | None = None) -> pa.Array:
+    """Casts a single column to the target type, handling errors by nulling."""
     if column.type == target_type:
         return column
 
@@ -106,6 +120,7 @@ def _convert_table_types_internal(table: pa.Table, target_schema: pa.Schema) -> 
                     pa.field(field.name, new_array.type, nullable=field.nullable, metadata=field.metadata)
                 )
         else:
+            # Add missing column as nulls
             null_array = pa.nulls(len(table), type=field.type, memory_pool=_get_memory_pool())
             new_arrays.append(null_array)
             new_fields.append(field)

@@ -63,6 +63,7 @@ Source = "https://github.com/Ivan Matveev/iceberg-loader"
 path = "src/iceberg_loader/__about__.py"
 
 [tool.hatch.envs.default]
+features = ["all"]
 dependencies = [
   "pytest>=7.0",
   "pytest-cov>=4.0",

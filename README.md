@@ -4,6 +4,7 @@ Utilities for loading data into Iceberg tables using PyArrow. This library provi
 
 [![PyPI - Version](https://img.shields.io/pypi/v/iceberg-loader.svg)](https://pypi.org/project/iceberg-loader)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/iceberg-loader.svg)](https://pypi.org/project/iceberg-loader)
+[![Coverage](https://img.shields.io/badge/coverage-93%25-brightgreen)](coverage.xml)
 [![CI](https://github.com/IvanMatveev/iceberg-loader/actions/workflows/ci.yml/badge.svg)](https://github.com/IvanMatveev/iceberg-loader/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -31,15 +32,29 @@ Although **PyIceberg** is the official and powerful library for interacting with
 ## Installation
 
 ```console
+# When published to PyPI:
 pip install "iceberg-loader>=0.0.1"
 ```
 
-For Hive/S3 backends install with extras:
-
+For Hive/S3 backends install with extras (PyPI target):
 ```console
-pip install "iceberg-loader[hive]"   # HiveCatalog
-pip install "iceberg-loader[s3]"     # S3Catalog
-pip install "iceberg-loader[all]"    # both
+pip install "iceberg-loader[hive]"
+pip install "iceberg-loader[s3]"
+pip install "iceberg-loader[all]"
+```
+
+Test build (TestPyPI) with dependencies from PyPI:
+```bash
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple "iceberg-loader[all]==0.0.1"
+```
+
+Use Python 3.12 (recommended; supported range 3.10–3.12).
+
+### Quick setup with uv
+```bash
+uv venv --python 3.12 .venv
+source .venv/bin/activate
+uv pip install "iceberg-loader[all]"
 ```
 
 ## Usage
@@ -105,7 +120,9 @@ def batch_generator():
 result = load_batches_to_iceberg(
     batch_iterator=batch_generator(),
     table_identifier=("my_db", "large_table"),
-    catalog=catalog
+    catalog=catalog,
+    # Optional: Commit every N batches to save memory on huge streams
+    commit_interval=100 
 )
 ```
 
@@ -150,18 +167,20 @@ expire_snapshots(table, keep_last=2)
 
 ## Development
 
-This project uses [Hatch](https://hatch.pypa.io/) for management.
+This project uses [Hatch](https://hatch.pypa.io/) as build backend. For local workflows prefer [uv](https://docs.astral.sh/uv/).
 
 ### Run Tests
 
 ```bash
-hatch run test
+uv run python -m pytest
 ```
 
 ### Linting
 
 ```bash
-hatch run lint
+uv run ruff check
+uv run ruff format --check
+uv run mypy
 ```
 
 ### Release
@@ -180,9 +199,17 @@ twine upload --repository testpypi dist/*
 twine upload dist/*
 ```
 
-Для GitHub Actions публикация срабатывает по тегу `v*` (см. `.github/workflows/release.yml`). Нужны секреты:
-- `PYPI_API_TOKEN` для PyPI
-- `TEST_PYPI_API_TOKEN` (опционально) для TestPyPI
+## Status / TestPyPI
+
+Work in progress. Test build:
+```bash
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple "iceberg-loader[all]==0.0.1"
+```
+Package page: https://test.pypi.org/project/iceberg-loader/0.0.1/
+
+GitHub Actions release runs on tag `v*` (see `.github/workflows/release.yml`). Required secrets:
+- `PYPI_API_TOKEN` for PyPI
+- `TEST_PYPI_API_TOKEN` (optional) for TestPyPI
 
 ### Examples
 
@@ -194,6 +221,7 @@ hatch run python examples/load_example.py
 hatch run python examples/advanced_scenarios.py
 hatch run python examples/load_complex_json.py
 hatch run python examples/load_stream.py
+hatch run python examples/load_with_commits.py
 hatch run python examples/load_from_api.py
 ```
 

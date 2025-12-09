@@ -15,8 +15,14 @@ The examples require a running MinIO (S3-compatible storage) and Hive Metastore.
    - Hive Metastore on thrift://localhost:9083
    - Postgres (backend for Hive)
 
-2. **Install dependencies:**
-   Ensure you have the project dependencies installed. If using `hatch`, this is handled automatically.
+2. **Install dependencies (uv or pip, with TestPyPI while WIP):**
+   ```bash
+   uv venv .venv && source .venv/bin/activate
+   uv pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple "iceberg-loader[all]==0.0.1"
+   # or
+   python3.12 -m venv .venv && source .venv/bin/activate
+   pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple "iceberg-loader[all]==0.0.1"
+   ```
 
 ## Shared Modules
 
@@ -29,13 +35,13 @@ All examples import these modules to avoid code duplication.
 
 ## Running Examples
 
-You can run the examples using `hatch` from the project root.
+You can run the examples from the project root using `uv run` (or plain `python` with the venv activated).
 
 ### 1. Basic Load (`load_example.py`)
 Demonstrates the simplest flow: creating a table and appending data.
 
 ```bash
-hatch run python examples/load_example.py
+uv run python examples/load_example.py
 ```
 
 ### 2. Advanced Scenarios (`advanced_scenarios.py`)
@@ -47,7 +53,7 @@ A comprehensive suite demonstrating key features:
 - **Full Overwrite**: Replacing the entire table content.
 
 ```bash
-hatch run python examples/advanced_scenarios.py
+uv run python examples/advanced_scenarios.py
 ```
 
 ### 3. Complex JSON Handling (`load_complex_json.py`)
@@ -56,17 +62,24 @@ Demonstrates how `iceberg-loader` handles "messy" or complex nested data that ty
 - Handles mixed types (e.g., a field being a Dict in one row and a List in another).
 
 ```bash
-hatch run python examples/load_complex_json.py
+uv run python examples/load_complex_json.py
 ```
 
 ### 4. IPC Stream Loading (`load_stream.py`)
 Demonstrates loading data from an Apache Arrow IPC stream source.
 
 ```bash
-hatch run python examples/load_stream.py
+uv run python examples/load_stream.py
 ```
 
-### 5. REST API Integration (`load_from_api.py`)
+### 5. Memory-Efficient Batch Loading (`load_with_commits.py`)
+Demonstrates using `commit_interval` to periodically commit transactions during a long running batch load. This prevents memory issues by clearing metadata periodically.
+
+```bash
+uv run python examples/load_with_commits.py
+```
+
+### 6. REST API Integration (`load_from_api.py`)
 Real-world example that loads data from a REST API into Iceberg tables.
 
 Features:
@@ -76,7 +89,7 @@ Features:
 - Batch processing of multiple endpoints
 
 ```bash
-hatch run python examples/load_from_api.py
+uv run python examples/load_from_api.py
 ```
 
 Note: This example uses the Jaffle Shop demo API and loads data into 6 tables (customers, orders, items, products, supplies, stores).
@@ -85,7 +98,7 @@ Note: This example uses the Jaffle Shop demo API and loads data into 6 tables (c
 Expire old snapshots in a table (keep last N or older_than_ms):
 
 ```bash
-hatch run python examples/maintenance_example.py
+uv run python examples/maintenance_example.py
 ```
 
 ## Cleanup

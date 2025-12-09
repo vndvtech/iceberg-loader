@@ -127,47 +127,20 @@ class IcebergLoader:
         Creates table if it doesn't exist, converts types to match Iceberg schema,
         and supports overwrite/append modes with optional idempotent writes.
         """
-        table = self._load_table_if_exists(table_identifier)
-        created_new_table = False
-
-        if table is None:
-            schema = self._convert_arrow_to_iceberg_schema(table_data.schema)
-            self._create_iceberg_table(table_identifier, schema, partition_col=partition_col)
-            table = self.catalog.load_table(table_identifier)
-            created_new_table = True
-        else:
-            # Only check for evolution if we didn't just create the table
-            if schema_evolution:
-                logger.info('Checking for schema evolution...')
-                new_schema = self._convert_arrow_to_iceberg_schema(table_data.schema, existing_schema=table.schema())
-                with table.update_schema() as update:
-                    update.union_by_name(new_schema)
-                table.refresh()
-
-        iceberg_schema = table.schema()
-        arrow_schema = self._convert_iceberg_schema_to_arrow(iceberg_schema)
-        table_data = convert_table_types(table_data, arrow_schema)
-
-        with table.transaction() as txn:
-            if write_mode == 'overwrite':
-                txn.overwrite(table_data)
-            else:
-                if replace_filter:
-                    logger.info('Implementing idempotent load: deleting rows matching filter: %s', replace_filter)
-                    txn.delete(replace_filter)
-                txn.append(table_data)
-
-        # Maintenance tasks (expire_snapshots) should be run separately
-        # self.maintenance.expire_snapshots(table)
-
-        return {
-            'rows_loaded': len(table_data),
-            'write_mode': write_mode,
-            'partition_col': partition_col if partition_col else 'none',
-            'table_location': table.location(),
-            'snapshot_id': table.current_snapshot().snapshot_id if table.current_snapshot() else 'none',
-            'new_table_created': created_new_table,
-        }
+        # For single table load, we can use a simpler approach or delegate to load_data_batches
+        # Delegating ensures consistent logic for schema evolution and transaction handling.
+        
+        # Convert table to batches (single batch)
+        batches = table_data.to_batches()
+        
+        return self.load_data_batches(
+            batch_iterator=iter(batches),
+            table_identifier=table_identifier,
+            write_mode=write_mode,
+            partition_col=partition_col,
+            replace_filter=replace_filter,
+            schema_evolution=schema_evolution,
+        )
 
     def load_ipc_stream(
         self,
@@ -177,6 +150,7 @@ class IcebergLoader:
         partition_col: str | None = None,
         replace_filter: str | None = None,
         schema_evolution: bool = False,
+        commit_interval: int = 0,
     ) -> dict[str, Any]:
         """
         Loads data from an Apache Arrow IPC stream source.
@@ -189,6 +163,7 @@ class IcebergLoader:
                 partition_col=partition_col,
                 replace_filter=replace_filter,
                 schema_evolution=schema_evolution,
+                commit_interval=commit_interval,
             )
 
     def load_data_batches(
@@ -199,97 +174,123 @@ class IcebergLoader:
         partition_col: str | None = None,
         replace_filter: str | None = None,
         schema_evolution: bool = False,
+        commit_interval: int = 0,
     ) -> dict[str, Any]:
         """
         Load data from RecordBatch iterator/reader into Iceberg table.
-        
+
         Efficiently processes streaming data in batches, creating table if needed
         and handling schema evolution. Supports overwrite/append with idempotent writes.
+
+        Args:
+            commit_interval: If > 0, accumulates N batches in memory before writing and committing.
+                             This reduces the number of snapshots/commits for large streams.
+                             If 0, writes and commits every batch immediately (safe for small loads).
         """
         total_rows = 0
-        first_batch = None
+        batches_processed = 0
+        
+        # Buffer for accumulating batches before write
+        pending_batches: list[pa.RecordBatch] = []
 
         table = self._load_table_if_exists(table_identifier)
         created_new_table = False
 
-        try:
-            first_batch = next(batch_iterator)
-            total_rows += len(first_batch)
-        except StopIteration:
-            return {
-                'rows_loaded': 0,
-                'write_mode': write_mode,
-                'batches_processed': 0,
-            }
+        is_first_write = True
+        has_overwritten = False
+        
+        # Helper to flush pending batches
+        def flush_batches(batches_to_write: list[pa.RecordBatch]):
+            nonlocal table, created_new_table, is_first_write, has_overwritten, total_rows
 
-        if table is None:
-            temp_table = pa.Table.from_batches([first_batch])
-            schema = self._convert_arrow_to_iceberg_schema(temp_table.schema)
-            self._create_iceberg_table(table_identifier, schema, partition_col=partition_col)
-            table = self.catalog.load_table(table_identifier)
-            created_new_table = True
+            if not batches_to_write:
+                return
 
-        # Optimization: Don't evolve if just created
-        if schema_evolution and first_batch is not None and not created_new_table:
-            logger.info('Checking for schema evolution based on first batch...')
-            temp_table = pa.Table.from_batches([first_batch])
-            new_schema = self._convert_arrow_to_iceberg_schema(temp_table.schema, existing_schema=table.schema())
-            with table.update_schema() as update:
-                update.union_by_name(new_schema)
-            table.refresh()
+            # Combine batches
+            combined_table = pa.Table.from_batches(batches_to_write)
+            
+            # 1. Initialize Table if needed (lazy init on first write)
+            if table is None:
+                schema = self._convert_arrow_to_iceberg_schema(combined_table.schema)
+                self._create_iceberg_table(table_identifier, schema, partition_col=partition_col)
+                table = self.catalog.load_table(table_identifier)
+                created_new_table = True
 
-        iceberg_schema = table.schema()
-        arrow_schema = self._convert_iceberg_schema_to_arrow(iceberg_schema)
+            # 2. Schema Evolution
+            arrow_schema = self._convert_iceberg_schema_to_arrow(table.schema())
+            incoming_names = set(combined_table.schema.names)
+            existing_names = set(arrow_schema.names)
+            
+            evolution_needed = schema_evolution and bool(incoming_names - existing_names)
+            
+            if evolution_needed:
+                logger.info('Schema evolution detected.')
+                new_schema = self._convert_arrow_to_iceberg_schema(combined_table.schema, existing_schema=table.schema())
+                with table.update_schema() as update:
+                    update.union_by_name(new_schema)
+                table.refresh()
+                arrow_schema = self._convert_iceberg_schema_to_arrow(table.schema())
 
-        with table.transaction() as txn:
-            if first_batch is not None:
-                first_table = pa.Table.from_batches([first_batch])
-                first_table = convert_table_types(first_table, arrow_schema)
+            # 3. Type Conversion
+            combined_table = convert_table_types(combined_table, arrow_schema)
 
-                if write_mode == 'overwrite':
-                    txn.overwrite(first_table)
-                else:
+            # 4. Write Transaction
+            # We use table.transaction() to group potential replace_filter + append
+            # OR just use table.append/overwrite if no filter is needed.
+            
+            # Note: pyiceberg's table.append() creates a transaction internally.
+            # But if we want to combine delete + append, we must use an explicit transaction.
+            
+            # If we need to overwrite or delete, we MUST use a transaction.
+            # If it's a simple append, table.append() is safer/easier, but mixing approaches is bad.
+            # Let's use explicit transaction for consistency.
+            
+            txn = table.transaction()
+            
+            with txn:
+                if is_first_write:
                     if replace_filter:
-                        logger.info('Implementing idempotent load: deleting rows matching filter: %s', replace_filter)
-                        txn.delete(replace_filter)
-                    txn.append(first_table)
+                         logger.info('Deleting rows matching filter: %s', replace_filter)
+                         txn.delete(replace_filter)
+                    
+                    if write_mode == 'overwrite' and not has_overwritten:
+                        txn.overwrite(combined_table)
+                        has_overwritten = True
+                    else:
+                        txn.append(combined_table)
+                    
+                    is_first_write = False
+                else:
+                    txn.append(combined_table)
+            
+            total_rows += len(combined_table)
 
-            batches_processed = 1
-            for batch in batch_iterator:
-                if schema_evolution:
-                    incoming_schema = pa.Table.from_batches([batch]).schema
-                    if set(incoming_schema.names) - set(arrow_schema.names):
-                        new_schema = self._convert_arrow_to_iceberg_schema(incoming_schema, existing_schema=table.schema())
-                        with table.update_schema() as update:
-                            update.union_by_name(new_schema)
-                        table.refresh()
-                        arrow_schema = self._convert_iceberg_schema_to_arrow(table.schema())
 
-                logger.info(
-                    'Processing batch %s with size %s. Table: %s',
-                    batches_processed,
-                    len(batch),
-                    table_identifier,
-                )
+        for batch in batch_iterator:
+            pending_batches.append(batch)
+            batches_processed += 1
+            
+            # Check if we should flush
+            # If commit_interval is 0 or 1, we flush every batch.
+            # If > 1, we flush when we reach the limit.
+            limit = 1 if commit_interval <= 1 else commit_interval
+            
+            if len(pending_batches) >= limit:
+                flush_batches(pending_batches)
+                pending_batches = []
 
-                batch_table = pa.Table.from_batches([batch])
-                batch_table = convert_table_types(batch_table, arrow_schema)
-
-                txn.append(batch_table)
-
-                total_rows += len(batch)
-                batches_processed += 1
-
-        # Maintenance tasks (expire_snapshots) should be run separately
-        # self.maintenance.expire_snapshots(table)
+        # Flush any remaining batches
+        if pending_batches:
+            flush_batches(pending_batches)
 
         return {
             'rows_loaded': total_rows,
             'write_mode': write_mode,
             'partition_col': partition_col if partition_col else 'none',
-            'table_location': table.location(),
-            'snapshot_id': table.current_snapshot().snapshot_id if table.current_snapshot() else 'none',
+            'table_location': table.location() if table else 'none',
+            'snapshot_id': table.current_snapshot().snapshot_id if table and table.current_snapshot() else 'none',
             'batches_processed': batches_processed,
+            'new_table_created': created_new_table,
         }
 
 
@@ -298,7 +299,6 @@ def load_data_to_iceberg(
     table_identifier: tuple[str, str],
     catalog: Catalog,
     write_mode: Literal['overwrite', 'append'] = 'overwrite',
-    # New flexible parameters
     partition_col: str | None = None,
     replace_filter: str | None = None,
     schema_evolution: bool = False,
@@ -314,16 +314,22 @@ def load_batches_to_iceberg(
     table_identifier: tuple[str, str],
     catalog: Catalog,
     write_mode: Literal['overwrite', 'append'] = 'overwrite',
-    # New flexible parameters
     partition_col: str | None = None,
     replace_filter: str | None = None,
     schema_evolution: bool = False,
     table_properties: dict[str, Any] | None = None,
+    commit_interval: int = 0,
 ) -> dict[str, Any]:
     """Public API wrapper for loading RecordBatch iterator/reader into Iceberg table."""
     loader = IcebergLoader(catalog, table_properties)
     return loader.load_data_batches(
-        batch_iterator, table_identifier, write_mode, partition_col, replace_filter, schema_evolution
+        batch_iterator,
+        table_identifier,
+        write_mode,
+        partition_col,
+        replace_filter,
+        schema_evolution,
+        commit_interval,
     )
 
 
@@ -336,9 +342,16 @@ def load_ipc_stream_to_iceberg(
     replace_filter: str | None = None,
     schema_evolution: bool = False,
     table_properties: dict[str, Any] | None = None,
+    commit_interval: int = 0,
 ) -> dict[str, Any]:
     """Public API wrapper for loading Apache Arrow IPC stream into Iceberg table."""
     loader = IcebergLoader(catalog, table_properties)
     return loader.load_ipc_stream(
-        stream_source, table_identifier, write_mode, partition_col, replace_filter, schema_evolution
+        stream_source,
+        table_identifier,
+        write_mode,
+        partition_col,
+        replace_filter,
+        schema_evolution,
+        commit_interval,
     )
