@@ -1,17 +1,14 @@
 import logging
-import sys
 import time
+from importlib import import_module
 from pathlib import Path
+import sys
 
-import pyarrow as pa
+BASE_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(BASE_DIR / 'src'))
+sys.path.insert(0, str(BASE_DIR / 'examples'))
 
-# Ensure parent directory (examples/) is on path
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from catalog import get_catalog
-
-from iceberg_loader import LoaderConfig, load_batches_to_iceberg
+from catalog import get_catalog  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -19,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 def generate_batches(num_batches=20, batch_size=10):
     """Generator that yields RecordBatches."""
+    pa = import_module('pyarrow')
     for i in range(num_batches):
         data = {
             'id': range(i * batch_size, (i + 1) * batch_size),
@@ -30,6 +28,10 @@ def generate_batches(num_batches=20, batch_size=10):
 
 
 def run_example():
+    loader_mod = import_module('iceberg_loader')
+    LoaderConfig = loader_mod.LoaderConfig
+    load_batches_to_iceberg = loader_mod.load_batches_to_iceberg
+    no_such_table_error = import_module('pyiceberg.exceptions').NoSuchTableError
     catalog = get_catalog()
     table_id = ('default', 'commit_interval_test')
 
@@ -37,7 +39,7 @@ def run_example():
     try:
         catalog.drop_table(table_id)
         logger.info('Dropped old table %s', table_id)
-    except Exception:
+    except no_such_table_error:
         pass
 
     logger.info('Starting load with commit_interval=5...')

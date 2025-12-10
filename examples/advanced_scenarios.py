@@ -1,15 +1,19 @@
 import logging
-import sys
+from importlib import import_module
 from pathlib import Path
+import sys
 
-# Ensure parent directory (examples/) is on path
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+BASE_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(BASE_DIR / 'src'))
+sys.path.insert(0, str(BASE_DIR / 'examples'))
 
-from catalog import get_catalog
+from catalog import get_catalog  # noqa: E402
 
-from iceberg_loader import LoaderConfig, load_data_to_iceberg
-from iceberg_loader.arrow_utils import create_arrow_table_from_data
+loader_mod = import_module('iceberg_loader')
+LoaderConfig = loader_mod.LoaderConfig
+load_data_to_iceberg = loader_mod.load_data_to_iceberg
+create_arrow_table_from_data = import_module('iceberg_loader.arrow_utils').create_arrow_table_from_data
+NoSuchTableError = import_module('pyiceberg.exceptions').NoSuchTableError
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -19,13 +23,13 @@ def drop_if_exists(catalog, table_id):
     try:
         catalog.drop_table(table_id)
         logger.info('Dropped existing table %s', table_id)
-    except Exception:
-        pass
+    except NoSuchTableError:
+        return
 
 
 def scenario_initial_append(catalog):
     table_id = ('default', 'advanced_s1_initial_append')
-    drop_if_exists(catalog, table_id)
+    # drop_if_exists(catalog, table_id)
 
     data_day_1 = [
         {'id': 1, 'category': 'A', 'ts': '2023-01-01', 'value': 100},
@@ -40,7 +44,7 @@ def scenario_initial_append(catalog):
 
 def scenario_append_new_partition(catalog):
     table_id = ('default', 'advanced_s2_append_partition')
-    drop_if_exists(catalog, table_id)
+    # drop_if_exists(catalog, table_id)
 
     # Initial day 1
     data_day_1 = [
@@ -69,7 +73,7 @@ def scenario_append_new_partition(catalog):
 
 def scenario_idempotent_replace_partition(catalog):
     table_id = ('default', 'advanced_s3_idempotent_replace')
-    drop_if_exists(catalog, table_id)
+    # drop_if_exists(catalog, table_id)
 
     # Base data day1+day2
     base_data = [
@@ -135,7 +139,7 @@ def scenario_schema_evolution(catalog):
 
 def scenario_full_overwrite(catalog):
     table_id = ('default', 'advanced_s5_full_overwrite')
-    drop_if_exists(catalog, table_id)
+    # drop_if_exists(catalog, table_id)
 
     initial = [
         {'id': 1, 'category': 'A', 'ts': '2023-01-01', 'value': 100},
@@ -183,9 +187,9 @@ def verify_table(catalog, table_id, expected_rows):
     table = catalog.load_table(table_id)
     rows = table.scan().to_arrow().num_rows
     if rows == expected_rows:
-        logger.info(f'Verified: Table {table_id} has {rows} rows (Expected: {expected_rows})')
+        logger.info('Verified: Table %s has %s rows (Expected: %s)', table_id, rows, expected_rows)
     else:
-        logger.error(f'Mismatch: Table {table_id} has {rows} rows, expected {expected_rows}')
+        logger.error('Mismatch: Table %s has %s rows, expected %s', table_id, rows, expected_rows)
 
 
 if __name__ == '__main__':
