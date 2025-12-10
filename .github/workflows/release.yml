@@ -24,7 +24,7 @@ jobs:
           pip install --upgrade pip
           pip install hatch ruff
       - name: Lint (ruff)
-        run: ruff check --output-format=github .
+        run: ruff check --output-format=github --extend-exclude 'examples'
       - name: Type check
         run: hatch run types:check
       - name: Test

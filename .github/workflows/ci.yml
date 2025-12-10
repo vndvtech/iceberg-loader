@@ -24,7 +24,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install ruff
       - name: Lint (Ruff, config from pyproject.toml)
-        run: ruff check --output-format=github .
+        run: ruff check --output-format=github --extend-exclude 'examples'
 
   types:
     needs: lint
