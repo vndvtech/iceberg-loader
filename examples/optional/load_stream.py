@@ -1,34 +1,33 @@
 import io
 import logging
-from importlib import import_module
-from pathlib import Path
 import sys
-
-BASE_DIR = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(BASE_DIR / 'src'))
-sys.path.insert(0, str(BASE_DIR / 'examples'))
+from pathlib import Path
 
 from catalog import get_catalog
+
+try:
+    from iceberg_loader import LoaderConfig, load_ipc_stream_to_iceberg
+    from pyiceberg.exceptions import NoSuchTableError
+except ImportError:  # fallback for local src run
+    sys.path.append(str(Path(__file__).resolve().parents[2] / 'src'))
+    from iceberg_loader import LoaderConfig, load_ipc_stream_to_iceberg
+    from pyiceberg.exceptions import NoSuchTableError
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
 def run_stream_load():
-    pa = import_module('pyarrow')
-    no_such_table_error = import_module('pyiceberg.exceptions').NoSuchTableError
-    loader_mod = import_module('iceberg_loader')
-    loader_config_cls = loader_mod.LoaderConfig
-    load_ipc_stream_to_iceberg = loader_mod.load_ipc_stream_to_iceberg
+    import pyarrow as pa
 
     catalog = get_catalog()
-    config = loader_config_cls(write_mode='append', commit_interval=5)
+    config = LoaderConfig(write_mode='append', commit_interval=5)
     table_id = ('default', 'stream_test')
 
     try:
         catalog.drop_table(table_id)
         logger.info('Dropped existing table %s', table_id)
-    except no_such_table_error:
+    except NoSuchTableError:
         pass
 
     logger.info('Generating IPC stream...')

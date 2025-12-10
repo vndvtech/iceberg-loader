@@ -139,6 +139,11 @@ warn_return_any = false
 module = ["pyarrow", "pyarrow.*", "pyiceberg.*", "requests"]
 ignore_missing_imports = true
 
+[tool.uv.workspace]
+members = [
+    "examples",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/iceberg_loader"]
 include = [

@@ -24,10 +24,21 @@ Utilities for loading data into Iceberg tables using PyArrow. Focus on robust in
 - Commit interval for long streams.
 - Maintenance helpers (expire snapshots).
 
-## Quickstart
+## Install
+
+### With uv (recommended)
+```bash
+uv pip install "iceberg-loader[all]"
+# or add to pyproject
+uv add "iceberg-loader[all]"
+```
+
+### With pip
 ```bash
 pip install "iceberg-loader[all]"
 ```
+
+## Quickstart
 ```python
 import pyarrow as pa
 from pyiceberg.catalog import load_catalog
@@ -339,31 +350,22 @@ twine upload --repository testpypi dist/*
 twine upload dist/*
 ```
 
-## Status / TestPyPI
-
-Work in progress. Test build:
-```bash
-pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple "iceberg-loader[all]==0.0.1"
-```
-Package page: https://test.pypi.org/project/iceberg-loader/0.0.1/
-
-GitHub Actions release runs on tag `v*` (see `.github/workflows/release.yml`). Required secrets:
-- `PYPI_API_TOKEN` for PyPI
-- `TEST_PYPI_API_TOKEN` (optional) for TestPyPI
-
 ### Examples
 
-See `examples/` directory for runnable scripts (requires local docker environment):
+Full list and descriptions: `examples/README.md`. Quick reference:
+- core: `advanced_scenarios.py`, `load_complex_json.py`, `load_with_commits.py`, `load_upsert.py`
+- optional: `optional/load_stream.py`, `optional/load_from_api.py`, `optional/maintenance_example.py`
 
+Run after activating the env:
 ```bash
-cd examples && docker-compose up -d
-hatch run python examples/load_example.py
-hatch run python examples/advanced_scenarios.py
-hatch run python examples/load_complex_json.py
-hatch run python examples/load_stream.py
-hatch run python examples/load_with_commits.py
-hatch run python examples/load_from_api.py
+cd examples
+python load_with_commits.py
+python advanced_scenarios.py
+python load_complex_json.py
+python optional/load_stream.py
+python optional/load_from_api.py
 ```
+To run with local MinIO/Hive, start the stack with `docker-compose up -d` in `examples/`.
 
 ## Documentation
 
