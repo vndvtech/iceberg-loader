@@ -1,14 +1,17 @@
 import logging
-from importlib import import_module
-from pathlib import Path
 import sys
+from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(BASE_DIR / 'src'))
-sys.path.insert(0, str(BASE_DIR / 'examples'))
+from catalog import get_catalog
+from optional.rest_adapter import RestAdapter
 
-from catalog import get_catalog  # noqa: E402
-from optional.rest_adapter import RestAdapter  # noqa: E402
+try:
+    from iceberg_loader import LoaderConfig, load_data_to_iceberg
+    from iceberg_loader.arrow_utils import create_arrow_table_from_data
+except ImportError:  # fallback for local src run
+    sys.path.append(str(Path(__file__).resolve().parents[2] / 'src'))
+    from iceberg_loader import LoaderConfig, load_data_to_iceberg
+    from iceberg_loader.arrow_utils import create_arrow_table_from_data
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -17,11 +20,7 @@ logger = logging.getLogger(__name__)
 def main():
     catalog = get_catalog()
     adapter = RestAdapter()
-    loader_mod = import_module('iceberg_loader')
-    loader_config_cls = loader_mod.LoaderConfig
-    load_data_to_iceberg = loader_mod.load_data_to_iceberg
-    create_arrow_table_from_data = import_module('iceberg_loader.arrow_utils').create_arrow_table_from_data
-    config = loader_config_cls(write_mode='overwrite', schema_evolution=True)
+    config = LoaderConfig(write_mode='overwrite', schema_evolution=True)
 
     endpoint_list = ['customers', 'orders', 'items', 'products', 'supplies', 'stores']
 

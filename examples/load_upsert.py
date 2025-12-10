@@ -1,17 +1,10 @@
 import logging
-import sys
 import time
 from datetime import datetime
-from pathlib import Path
 
 import pyarrow as pa
 
-# Ensure parent directory (examples/) is on path
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 from catalog import get_catalog
-
 from iceberg_loader import LoaderConfig, load_data_to_iceberg
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
