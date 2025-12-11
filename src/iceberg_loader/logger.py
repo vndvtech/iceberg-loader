@@ -36,12 +36,7 @@ def __getattr__(name: str) -> LogMethod | Any:
 
     def wrapper(msg: Any, *args: Any, **kwargs: Any) -> Any:
         if LOGGER is None:
-            # If logger is not configured, we default to a basic config or no-op.
-            # Ideally, configure_logging should be called before this.
-            # For safety, let's init a default one if accessed prematurely?
-            # Or just return None/Silent? Let's be safe and return None if not ready,
-            # but usually apps should call init.
-            return None
+            configure_logging()
 
         target: Callable[..., Any] = getattr(LOGGER, name)
 
@@ -60,8 +55,10 @@ def __getattr__(name: str) -> LogMethod | Any:
         return wrapper
 
     # Allow accessing other attributes of LOGGER if initialized
-    if LOGGER:
-        return getattr(LOGGER, name)
+    if LOGGER is None:
+        configure_logging()
+
+    return getattr(LOGGER, name)
 
     raise AttributeError(f'module {__name__} has no attribute {name}')
 

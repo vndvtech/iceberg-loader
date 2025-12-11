@@ -11,6 +11,12 @@ from iceberg_loader.arrow_utils import (
 
 
 class TestArrowUtils(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        from iceberg_loader.logger import configure_logging
+
+        configure_logging()
+
     def test_create_arrow_table_basic(self):
         data = [{'id': 1, 'name': 'Alice'}, {'id': 2, 'name': 'Bob'}]
         table = create_arrow_table_from_data(data)
@@ -56,7 +62,7 @@ class TestArrowUtils(unittest.TestCase):
 
     def test_convert_column_type_warns_and_nulls(self):
         column = pa.array(['a', 'b'])
-        with self.assertLogs('iceberg_loader.arrow_utils', level='WARNING') as cm:
+        with self.assertLogs('iceberg_loader', level='WARNING') as cm:
             converted = convert_column_type(column, pa.int64(), 'bad')
         self.assertEqual(converted.to_pylist(), [None, None])
         self.assertTrue(any('bad' in msg for msg in cm.output))
@@ -70,7 +76,7 @@ class TestArrowUtils(unittest.TestCase):
     def test_convert_table_types_cast_error_branch(self):
         table = pa.Table.from_pydict({'a': ['x', 'y']})
         target = pa.schema([pa.field('a', pa.int64())])
-        with self.assertLogs('iceberg_loader.arrow_utils', level='WARNING'):
+        with self.assertLogs('iceberg_loader', level='WARNING'):
             converted = convert_table_types(table, target)
         self.assertEqual(converted.column('a').to_pylist(), [None, None])
 

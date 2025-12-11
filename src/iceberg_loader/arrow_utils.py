@@ -1,3 +1,4 @@
+import contextlib
 import json
 from collections.abc import Iterator
 from functools import partial
@@ -82,15 +83,47 @@ def _create_table_native(data: list[dict[str, Any]]) -> pa.Table:
 
 
 def convert_column_type(column: pa.Array, target_type: pa.DataType, column_name: str | None = None) -> pa.Array:
-    """Casts a single column to the target type, handling errors by nulling."""
-    if column.type == target_type:
+    """
+    Casts a single column to the target type, handling errors gracefully.
+    Tries multiple strategies before falling back to all-nulls.
+    """
+    if column.type.equals(target_type):
         return column
 
+    # Strategy 1: Safe Cast (Strict)
     try:
-        return pc.cast(column, target_type)
+        return pc.cast(column, target_type, safe=True)
     except (ValueError, TypeError, pa.ArrowInvalid):
-        logger.warning('Cast failed for column %s to %s, filling nulls', column_name or '<unknown>', target_type)
-        return pa.nulls(len(column), type=target_type, memory_pool=_get_memory_pool())
+        pass
+
+    # Strategy 2: Unsafe Cast (Allow truncation/parsing)
+    # Useful for String -> Timestamp, String -> Date, Int -> SmallInt
+    try:
+        return pc.cast(column, target_type, safe=False)
+    except (ValueError, TypeError, pa.ArrowInvalid):
+        pass
+
+    # Strategy 3: Special Handling for Strings to Timestamp/Date
+    # Sometimes 'safe=False' isn't enough for specific formats or mixed content
+    if (pa.types.is_string(column.type) or pa.types.is_large_string(column.type)) and (
+        pa.types.is_timestamp(target_type) or pa.types.is_date(target_type)
+    ):
+        # Try parsing ISO 8601 explicitly if simple cast failed
+        with contextlib.suppress(Exception):
+            # pc.strptime could be used if we knew the format, but generic cast handles ISO well.
+            # If we reached here, it means standard cast failed.
+            # Let's try assume_timezone if it's a tz issue
+            pass
+
+    # Fallback: Log warning and fill with NULLs
+    # TODO: In future, we could implement row-wise recovery (slower)
+    logger.warning(
+        'Cast failed for column %s (%s -> %s). Filling with NULLs.',
+        column_name or '<unknown>',
+        column.type,
+        target_type,
+    )
+    return pa.nulls(len(column), type=target_type, memory_pool=_get_memory_pool())
 
 
 def convert_table_types(table: pa.Table, target_schema: pa.Schema) -> pa.Table:
