@@ -1,4 +1,3 @@
-import logging
 from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any, BinaryIO, Literal
@@ -6,12 +5,11 @@ from typing import Any, BinaryIO, Literal
 import pyarrow as pa
 from pyiceberg.catalog import Catalog
 
+from iceberg_loader import logger
 from iceberg_loader.arrow_utils import convert_table_types
 from iceberg_loader.schema import SchemaManager
 from iceberg_loader.settings import TABLE_PROPERTIES
 from iceberg_loader.strategies import get_write_strategy
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass

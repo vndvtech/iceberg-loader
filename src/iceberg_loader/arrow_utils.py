@@ -1,5 +1,4 @@
 import json
-import logging
 from collections.abc import Iterator
 from functools import partial
 from typing import Any
@@ -7,8 +6,9 @@ from typing import Any
 import pyarrow as pa
 import pyarrow.compute as pc
 
+from iceberg_loader import logger
+
 _json_dumps = partial(json.dumps, ensure_ascii=False, separators=(',', ':'))
-logger = logging.getLogger(__name__)
 
 
 def _get_memory_pool() -> pa.MemoryPool:
