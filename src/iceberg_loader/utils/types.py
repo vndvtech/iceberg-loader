@@ -65,6 +65,12 @@ class TypeRegistry:
         if arrow_type in self._arrow_to_iceberg:
             return self._arrow_to_iceberg[arrow_type]
 
+        if pa.types.is_integer(arrow_type):
+            bit_width = getattr(arrow_type, 'bit_width', None)
+            if bit_width and bit_width > 32:
+                return LongType()
+            return IntegerType()
+
         if pa.types.is_timestamp(arrow_type):
             if arrow_type.tz is not None:
                 return TimestamptzType()
