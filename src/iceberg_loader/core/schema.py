@@ -148,6 +148,24 @@ class SchemaManager:
         try:
             transform, source_col, param = parse_partition_transform(partition_col)
             field = schema.find_field(source_col)
+
+            # Heuristic for new partition field ID: max existing ID + 1
+            max_field_id = max(f.field_id for f in schema.fields)
+            partition_field_id = max_field_id + 1
+
+            partition_name = self._get_partition_name(transform, source_col, param)
+            transform_impl = get_transform_impl(transform, param)
+
+            self._validate_partition_transform(transform, source_col, field.field_type, transform_impl)
+
+            return PartitionSpec(
+                PartitionField(
+                    source_id=field.field_id,
+                    field_id=partition_field_id,
+                    transform=transform_impl,
+                    name=partition_name,
+                ),
+            )
         except ValueError as e:
             logger.warning(
                 "Failed to create partition spec for '%s': %s. Creating table without partition.",
@@ -155,24 +173,6 @@ class SchemaManager:
                 e,
             )
             return None
-
-        # Heuristic for new partition field ID: max existing ID + 1
-        max_field_id = max(f.field_id for f in schema.fields)
-        partition_field_id = max_field_id + 1
-
-        partition_name = self._get_partition_name(transform, source_col, param)
-        transform_impl = get_transform_impl(transform, param)
-
-        self._validate_partition_transform(transform, source_col, field.field_type, transform_impl)
-
-        return PartitionSpec(
-            PartitionField(
-                source_id=field.field_id,
-                field_id=partition_field_id,
-                transform=transform_impl,
-                name=partition_name,
-            ),
-        )
 
     def _get_partition_name(self, transform: str, source_col: str, param: int | None) -> str:
         if transform == 'identity':

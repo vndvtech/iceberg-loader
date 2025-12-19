@@ -10,6 +10,7 @@ from pyiceberg.transforms import (
     MonthTransform,
     Transform,
     TruncateTransform,
+    VoidTransform,
     YearTransform,
 )
 from pyiceberg.types import DateType, TimestampType, TimestamptzType
@@ -80,6 +81,8 @@ def get_transform_impl(transform_name: str, param: int | None) -> Transform:
         if param is None:
             raise ValueError('Truncate transform requires a width parameter')
         return TruncateTransform(width=param)
+    if transform_name == 'void':
+        return VoidTransform()
     raise ValueError(f'Unsupported transform implementation: {transform_name}')
 
 
