@@ -4,7 +4,7 @@ from typing import Any, BinaryIO
 import pyarrow as pa
 from pyiceberg.catalog import Catalog
 
-from iceberg_loader.core.config import TABLE_PROPERTIES, LoaderConfig
+from iceberg_loader.core.config import TABLE_PROPERTIES, LoaderConfig, ensure_loader_config
 from iceberg_loader.core.schema import SchemaManager
 from iceberg_loader.core.strategies import get_write_strategy
 from iceberg_loader.services.logging import logger
@@ -29,7 +29,12 @@ class IcebergLoader:
             self.table_properties.update(table_properties)
 
         self.schema_manager = SchemaManager(self.catalog, self.table_properties)
-        self.default_config = default_config or LoaderConfig()
+        self.default_config = ensure_loader_config(default_config)
+
+    def _resolve_config(self, config: LoaderConfig | None) -> LoaderConfig:
+        if config is None:
+            return self.default_config
+        return ensure_loader_config(config)
 
     def load_data(
         self,
@@ -79,7 +84,7 @@ class IcebergLoader:
         pending_batches: list[pa.RecordBatch] = []
 
         # Resolve config
-        effective_config = config or self.default_config
+        effective_config = self._resolve_config(config)
 
         # Merge global loader properties with config-specific properties
         effective_table_properties = self.table_properties.copy()
