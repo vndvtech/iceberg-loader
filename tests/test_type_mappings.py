@@ -8,6 +8,7 @@ from iceberg_loader.utils.types import get_arrow_type, get_iceberg_type, registe
 def test_arrow_to_iceberg_basic() -> None:
     assert get_iceberg_type(pa.string()) == StringType()
     assert get_iceberg_type(pa.int32()) == IntegerType()
+    assert get_iceberg_type(pa.int16()) == IntegerType()
     assert get_iceberg_type(pa.int64()) == LongType()
 
 
