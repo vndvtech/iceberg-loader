@@ -107,8 +107,8 @@ Alternatively, use standard PyArrow conversion: `pa.Table.from_pylist(data)`.
 We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, coding style, and PR guidelines.
 
 ```bash
-hatch run lint
-hatch run test
+uv run ruff check . && uv run ruff format --check . && uv run mypy src/iceberg_loader tests
+uv run pytest
 ```
 
 ## Contributors

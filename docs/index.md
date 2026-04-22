@@ -334,7 +334,7 @@ See the [Examples](examples.md) page for runnable demos covering streaming, upse
 
 ## Development
 
-This project uses [Hatch](https://hatch.pypa.io/) as build backend. For local workflows prefer [uv](https://docs.astral.sh/uv/).
+This project uses [uv](https://docs.astral.sh/uv/) for all local workflows.
 
 ### Run Tests
 
@@ -353,7 +353,7 @@ uv run mypy
 ### Release
 
 ```bash
-hatch build
+uv build
 twine check dist/*
 twine upload --repository testpypi dist/*
 twine upload dist/*
