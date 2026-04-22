@@ -56,6 +56,8 @@ def run_upsert_example():
     config_upsert = LoaderConfig(write_mode='upsert', join_cols=['id'])
     load_data_to_iceberg(upsert_data, table_identifier, catalog, config_upsert)
 
+    # Reload the table so the read reflects the snapshot written by the upsert.
+    table = catalog.load_table(table_identifier)
     rows_after = table.scan().to_arrow()
     logger.info('Rows after upsert: %d', len(rows_after))
     print(rows_after.to_pydict())

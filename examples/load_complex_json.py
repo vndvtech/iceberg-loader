@@ -2,6 +2,7 @@ import json
 import logging
 
 from catalog import get_catalog
+from pyiceberg.exceptions import NoSuchTableError
 
 from iceberg_loader import LoaderConfig, load_data_to_iceberg
 from iceberg_loader.utils.arrow import create_arrow_table_from_data
@@ -13,6 +14,12 @@ logger = logging.getLogger(__name__)
 def run_complex_load():
     catalog = get_catalog()
     table_id = ('default', 'complex_json_test')
+
+    try:
+        catalog.drop_table(table_id)
+        logger.info('Dropped existing table %s', table_id)
+    except NoSuchTableError:
+        pass
 
     data = [
         {'id': 1, 'complex_field': {'a': 1, 'b': 'nested'}},
@@ -41,6 +48,8 @@ def run_complex_load():
     table = catalog.load_table(table_id)
     result_arrow = table.scan().to_arrow()
     result_data = result_arrow.to_pylist()
+    if len(result_data) != len(data):
+        raise AssertionError(f'Expected {len(data)} rows, found {len(result_data)}')
 
     for row in result_data:
         logger.info('Row: %s', row)
@@ -49,7 +58,7 @@ def run_complex_load():
         if isinstance(val, str):
             logger.info('  -> complex_field is STRING as expected. Parsed: %s', json.loads(val))
         else:
-            logger.error('  -> complex_field is NOT a string! Type: %s', type(val))
+            raise AssertionError(f'complex_field is not a string: {type(val)}')
 
 
 if __name__ == '__main__':

@@ -77,10 +77,16 @@ docker-compose up -d
 cd ..
 
 # Run individual examples
-uv run python examples/load_example.py
+uv run python examples/load_upsert.py
 uv run python examples/advanced_scenarios.py
 uv run python examples/load_with_commits.py
+
+# Run the Docker-backed smoke subset
+bash tools/run_examples_smoke.sh
 ```
+
+The smoke subset intentionally excludes `examples/load_from_api.py` because it depends on an external API,
+and `examples/load_stream.py` because it is much heavier than a normal CI smoke run.
 
 ## Code Style Guidelines
 
