@@ -79,7 +79,7 @@ jobs:
       - name: Install deps
         run: uv sync --group dev --all-extras
       - name: Type check
-        run: uv run mypy src/iceberg_loader tests
+        run: uv run ty check
 
   tests:
     needs: [lint]

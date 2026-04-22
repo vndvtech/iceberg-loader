@@ -49,7 +49,7 @@ test = [
 ]
 dev = [
   "ruff>=0.5.0",
-  "mypy>=1.10.0",
+  "ty>=0.0.1",
   "pytest>=7.0",
   "pytest-cov>=4.0",
   "pre-commit>=3.5.0",
@@ -64,7 +64,7 @@ test = [
 ]
 dev = [
   "ruff>=0.5.0",
-  "mypy>=1.10.0",
+  "ty>=0.0.1",
   "pytest>=7.0",
   "pytest-cov>=4.0",
   "pre-commit>=3.5.0",
@@ -93,7 +93,7 @@ extras = ["dev"]
 commands = [
     ["ruff", "check", "."],
     ["ruff", "format", "--check", "."],
-    ["mypy", "src/iceberg_loader", "tests"]
+    ["ty", "check"]
 ]
 
 [project.urls]
@@ -142,7 +142,6 @@ exclude = [
   ".git-rewrite",
   ".hg",
   ".ipynb_checkpoints",
-  ".mypy_cache",
   ".nox",
   ".pants.d",
   ".pyenv",
@@ -192,27 +191,6 @@ ignore = ["BLE001", "UP017"]
 quote-style = "single"
 indent-style = "space"
 
-[tool.mypy]
-python_version = "3.12"
-warn_unused_configs = true
-warn_redundant_casts = true
-warn_return_any = false
-strict_optional = true
-disallow_untyped_defs = true
-disallow_untyped_calls = false
-follow_imports = "normal"
-show_error_codes = true
-exclude = ["examples/"]
-
 [tool.isort]
 profile = "black"
 multi_line_output = 3
-
-[[tool.mypy.overrides]]
-module = "tests.*"
-disallow_untyped_defs = false
-warn_return_any = false
-
-[[tool.mypy.overrides]]
-module = ["pyarrow", "pyarrow.*", "pyiceberg.*", "requests"]
-ignore_missing_imports = true

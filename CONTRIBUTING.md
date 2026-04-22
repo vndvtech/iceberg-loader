@@ -29,7 +29,7 @@ Thank you for your interest in contributing to the project! This guide will help
 
 4. **Run linters and tests**
    ```bash
-   uv run ruff check . && uv run ruff format --check . && uv run mypy src/iceberg_loader tests
+   uv run ruff check . && uv run ruff format --check . && uv run ty check
    uv run pytest
    ```
 
@@ -55,7 +55,7 @@ uv run pytest -v
 
 ```bash
 # Run all checks (lint + format check + types)
-uv run ruff check . && uv run ruff format --check . && uv run mypy src/iceberg_loader tests
+uv run ruff check . && uv run ruff format --check . && uv run ty check
 
 # Auto-fix linting issues
 uv run ruff check --fix .
@@ -64,7 +64,7 @@ uv run ruff check --fix .
 uv run ruff format .
 
 # Type checking
-uv run mypy src/iceberg_loader tests
+uv run ty check
 ```
 
 ### Running Examples

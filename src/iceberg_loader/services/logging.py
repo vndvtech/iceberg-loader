@@ -108,7 +108,7 @@ class JsonFormatter(logging.Formatter):
         self.version = version
 
     def format(self, record: LogRecord) -> str:
-        log_obj = {
+        log_obj: dict[str, Any] = {
             'time': self.formatTime(record, self.datefmt),
             'level': record.levelname,
             'message': record.getMessage(),

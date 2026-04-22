@@ -18,7 +18,7 @@ uv run pytest tests/test_iceberg_loader.py
 uv run pytest --cov=iceberg_loader --cov-report=html
 
 # Lint + format check + type check
-uv run ruff check . && uv run ruff format --check . && uv run mypy src/iceberg_loader tests
+uv run ruff check . && uv run ruff format --check . && uv run ty check
 
 # Auto-fix lint issues
 uv run ruff check --fix .

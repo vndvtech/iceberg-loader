@@ -327,7 +327,7 @@ See the [Examples](examples.md) page for runnable demos covering streaming, upse
 - Align versions in `pyproject.toml` and `src/iceberg_loader/__about__.py`.
 - Update `RELEASE.md` with highlights/breaking changes.
 - Run `uv lock --locked` and commit `uv.lock` if it changes.
-- Run lint (`uv run ruff check .`), types (`uv run mypy src/iceberg_loader tests`), and tests (`uv run python -m pytest`).
+- Run lint (`uv run ruff check .`), types (`uv run ty check src/iceberg_loader tests`), and tests (`uv run python -m pytest`).
 - Tag and push (`git tag -a vX.Y.Z -m "Release X.Y.Z"`), let CI publish.
 
 ---
@@ -347,7 +347,7 @@ uv run python -m pytest
 ```bash
 uv run ruff check
 uv run ruff format --check
-uv run mypy
+uv run ty check
 ```
 
 ### Release

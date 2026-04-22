@@ -98,7 +98,7 @@ Alternatively, use standard PyArrow conversion: `pa.Table.from_pylist(data)`.
 - Bump version in `pyproject.toml` and `src/iceberg_loader/__about__.py` (they must match).
 - Update `RELEASE.md` with highlights and breaking notes.
 - Run `uv lock --locked` and commit `uv.lock` if it changes.
-- Run `uv run ruff check .`, `uv run mypy src/iceberg_loader tests`, and `uv run python -m pytest`.
+- Run `uv run ruff check .`, `uv run ty check`, and `uv run python -m pytest`.
 - Tag and push (`git tag -a vX.Y.Z ...`), then let CI publish.
 
 
@@ -107,7 +107,7 @@ Alternatively, use standard PyArrow conversion: `pa.Table.from_pylist(data)`.
 We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, coding style, and PR guidelines.
 
 ```bash
-uv run ruff check . && uv run ruff format --check . && uv run mypy src/iceberg_loader tests
+uv run ruff check . && uv run ruff format --check . && uv run ty check
 uv run pytest
 ```
 

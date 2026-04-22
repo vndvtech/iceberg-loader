@@ -27,14 +27,15 @@ repos:
         args: ["--config=pyproject.toml"]
         exclude: ^examples/
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.13.0
+  - repo: local
     hooks:
-      - id: mypy
+      - id: ty
+        name: ty
+        entry: uv run ty check
+        language: system
+        types: [python]
+        pass_filenames: false
         exclude: ^examples/
-        additional_dependencies:
-          - pyarrow>=18.0.0
-          - pyiceberg>=0.7.1
 
   - repo: local
     hooks:
