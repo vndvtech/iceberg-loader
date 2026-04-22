@@ -10,27 +10,27 @@ Thank you for your interest in contributing to the project! This guide will help
    cd iceberg-loader
    ```
 
-2. **Install dependencies**
+2. **Install uv**
 
-   We use [Hatch](https://hatch.pypa.io/latest/) for environment management:
+   We use [uv](https://docs.astral.sh/uv/) for environment management:
    ```bash
-   pip install hatch
+   curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
 
-   **Note**: This project requires Python 3.10-3.14. If you encounter installation issues:
-   - Verify your Python version: `python --version`
-   - Use Python 3.12 for best compatibility
-   - `uv` may require explicit Python version: `uv venv --python 3.12`
+   **Note**: This project requires Python 3.10-3.14. If you need a specific version:
+   ```bash
+   uv venv --python 3.12
+   ```
 
 3. **Set up the development environment**
    ```bash
-   hatch shell
+   uv sync
    ```
 
 4. **Run linters and tests**
    ```bash
-   hatch run lint
-   hatch run test
+   uv run ruff check . && uv run ruff format --check . && uv run ty check
+   uv run pytest
    ```
 
 ## Development Workflow
@@ -39,32 +39,32 @@ Thank you for your interest in contributing to the project! This guide will help
 
 ```bash
 # Run all tests
-hatch run test
+uv run pytest
 
 # Run with coverage report
-hatch run test -- --cov=iceberg_loader --cov-report=html
+uv run pytest --cov=iceberg_loader --cov-report=html
 
 # Run specific test file
-hatch run test tests/test_iceberg_loader.py
+uv run pytest tests/test_iceberg_loader.py
 
 # Run tests with verbose output
-hatch run test -v
+uv run pytest -v
 ```
 
 ### Code Quality
 
 ```bash
-# Run linter (ruff)
-hatch run lint
+# Run all checks (lint + format check + types)
+uv run ruff check . && uv run ruff format --check . && uv run ty check
 
 # Auto-fix linting issues
-hatch run ruff check --fix .
+uv run ruff check --fix .
 
 # Format code
-hatch run ruff format .
+uv run ruff format .
 
 # Type checking
-hatch run types:check
+uv run ty check
 ```
 
 ### Running Examples
@@ -77,10 +77,16 @@ docker-compose up -d
 cd ..
 
 # Run individual examples
-hatch run python examples/load_example.py
-hatch run python examples/advanced_scenarios.py
-hatch run python examples/load_with_commits.py
+uv run python examples/load_upsert.py
+uv run python examples/advanced_scenarios.py
+uv run python examples/load_with_commits.py
+
+# Run the Docker-backed smoke subset
+bash tools/run_examples_smoke.sh
 ```
+
+The smoke subset intentionally excludes `examples/load_from_api.py` because it depends on an external API,
+and `examples/load_stream.py` because it is much heavier than a normal CI smoke run.
 
 ## Code Style Guidelines
 

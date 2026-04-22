@@ -1,3 +1,26 @@
+# Release 0.1.3 — 2026-04-23
+
+## Highlights
+- Added a Docker-backed examples smoke workflow in GitHub Actions.
+- Added `tools/run_examples_smoke.sh` to bring up the local Trino/Hive/MinIO stack and run the fast local example subset.
+- Fixed `examples/load_upsert.py` to reload the table before verifying the post-upsert snapshot.
+- Made `examples/load_complex_json.py` and `examples/advanced_scenarios.py` deterministic for repeated runs and CI smoke checks.
+- Updated example and contributor documentation to describe the smoke flow and its scope.
+
+## Breaking Changes
+- None.
+
+## Test Plan
+- `bash tools/run_examples_smoke.sh`
+
+## Release Steps
+1) Ensure version is set to `0.1.3`.
+2) Tag and push:
+   ```bash
+   git tag -a v0.1.3 -m "Release 0.1.3"
+   git push origin v0.1.3
+   ```
+
 # Release 0.0.7 — 2025-12-13
 
 ## Highlights

@@ -40,7 +40,7 @@ jobs:
       - name: Lint (ruff)
         run: uv run ruff check --output-format=github --extend-exclude 'examples'
       - name: Type check
-        run: uv run mypy src/iceberg_loader tests
+        run: uv run ty check
       - name: Test
         run: uv run pytest --cov=iceberg_loader --cov=tests --cov-report=xml --cov-report=html --junitxml=pytest-report.xml
       - name: Upload coverage.xml

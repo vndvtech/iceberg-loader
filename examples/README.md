@@ -68,6 +68,18 @@ uv run python load_from_api.py
 uv run python maintenance_example.py
 ```
 
+Run the local smoke subset:
+
+```bash
+bash ../tools/run_examples_smoke.sh
+```
+
+This smoke suite covers the fast local examples that only depend on the bundled Docker stack.
+It intentionally skips:
+
+- `load_from_api.py`: depends on an external public API.
+- `load_stream.py`: writes a very large in-memory IPC stream and is too heavy for routine smoke checks.
+
 ## Example summary
 
 - `load_upsert.py`: upsert by keys.

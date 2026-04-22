@@ -79,7 +79,7 @@ jobs:
       - name: Install deps
         run: uv sync --group dev --all-extras
       - name: Type check
-        run: uv run mypy src/iceberg_loader tests
+        run: uv run ty check
 
   tests:
     needs: [lint]
@@ -142,7 +142,6 @@ jobs:
   examples-smoke:
     needs: [lint]
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v6.0.2
       - name: Set up uv
@@ -154,5 +153,11 @@ jobs:
           python-version: "3.12"
       - name: Install deps
         run: uv sync --group dev --all-extras
-      - name: Run smoke example test
-        run: uv run python -m pytest tests/test_examples_smoke.py
+      - name: Start Docker-backed example smoke suite
+        run: bash tools/run_examples_smoke.sh
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose -f examples/docker-compose.yml logs --no-color
+      - name: Tear down example stack
+        if: always()
+        run: docker compose -f examples/docker-compose.yml down -v
