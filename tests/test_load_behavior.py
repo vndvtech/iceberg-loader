@@ -221,6 +221,20 @@ def test_mixed_buffer_keeps_partition_on_load_timestamp(sql_catalog: SqlCatalog)
     assert [f.name for f in sql_catalog.load_table(TID).spec().fields] == ['_load_dttm_day']
 
 
+def test_new_table_column_order_puts_load_timestamp_before_evolved_columns(sql_catalog: SqlCatalog) -> None:
+    batches = [batch(id=[1]), batch(id=[2], x=['a'])]
+    config = LoaderConfig(
+        write_mode='append',
+        schema_evolution=True,
+        commit_interval=2,
+        load_timestamp=datetime(2025, 1, 1),
+    )
+
+    load_batches_to_iceberg(iter(batches), TID, sql_catalog, config)
+
+    assert sql_catalog.load_table(TID).schema().column_names == ['id', '_load_dttm', 'x']
+
+
 def test_reused_loader_keeps_loads_separate(sql_catalog: SqlCatalog) -> None:
     loader = IcebergLoader(sql_catalog)
 

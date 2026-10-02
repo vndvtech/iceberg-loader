@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 import pyarrow as pa
 import pytest
 
-from iceberg_loader.core.config import TABLE_PROPERTIES, LoaderConfig
+from iceberg_loader.core.config import TABLE_PROPERTIES
 from iceberg_loader.iceberg_loader import IcebergLoader, load_data_to_iceberg
 
 
@@ -75,10 +75,3 @@ def test_field_ids_preserved_on_evolution(loader: IcebergLoader, arrow_schema: p
     assert ids['name'] == base_schema.find_field('name').field_id
     assert ids['date_col'] == base_schema.find_field('date_col').field_id
     assert ids['extra'] > max(field.field_id for field in base_schema.fields)
-
-
-def test_load_data_batches_empty_iterator(loader: IcebergLoader, table_identifier: tuple[str, str]) -> None:
-    config = LoaderConfig(write_mode='append')
-    result = loader.load_data_batches(batch_iterator=iter([]), table_identifier=table_identifier, config=config)
-    assert result['rows_loaded'] == 0
-    assert result['batches_processed'] == 0

@@ -5,6 +5,7 @@ import pyarrow as pa
 
 from iceberg_loader.core.config import LoaderConfig
 from iceberg_loader.core.schema import SchemaManager
+from iceberg_loader.services.logging import logger
 from iceberg_loader.utils.arrow import convert_table_types
 
 
@@ -49,11 +50,14 @@ class BatchConformer:
         table = self._ensure_table(tables[0].schema)
 
         if self._config.load_timestamp:
-            ts_field = tables[0].schema.field(self._config.load_ts_col)
+            ts_field = pa.field(self._config.load_ts_col, pa.timestamp('us'))
             self._schema_manager.evolve_schema_if_needed(table, pa.schema([ts_field]))
 
         if self._config.schema_evolution:
-            for schema in _distinct_schemas(t.schema for t in tables):
+            schemas = _distinct_schemas(t.schema for t in tables)
+            if len(schemas) > 1:
+                logger.info('Mixed schemas in batch buffer. Normalizing...')
+            for schema in schemas:
                 self._schema_manager.evolve_schema_if_needed(table, schema)
 
         target_schema = self._schema_manager.get_arrow_schema(table)
