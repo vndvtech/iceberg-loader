@@ -12,7 +12,7 @@ iceberg-loader/
 │   └── iceberg_loader/
 │       ├── __init__.py           # Public API re-exports
 │       ├── __about__.py         # Version string
-│       ├── iceberg_loader.py    # Thin convenience wrappers
+│       ├── iceberg_loader.py    # Backward-compat shim
 │       ├── core/                 # Core architecture
 │       │   ├── __init__.py       # Re-exports public core symbols
 │       │   ├── config.py         # LoaderConfig, TABLE_PROPERTIES
@@ -47,9 +47,9 @@ iceberg-loader/
 | File | Purpose |
 |------|---------|
 | `__init__.py` | Stable public API. Re-exports `IcebergLoader`, `LoaderConfig`, load functions, logger, `expire_snapshots`, `get_rest_catalog`, `__version__`. |
-| `__about__.py` | Single source of truth for version: `__version__ = '0.1.3'`. Must match `pyproject.toml`. |
+| `__about__.py` | Single source of truth for version: `__version__ = '0.1.4'`. Must match `pyproject.toml`. |
 | `py.typed` | PEP 561 marker — tells type checkers this package is typed. |
-| `iceberg_loader.py` | Thin wrappers around `IcebergLoader` class methods. Kept in case external code imports from this module instead of package root. |
+| `iceberg_loader.py` | Backward-compat shim: aliases `IcebergLoader = CoreIcebergLoader` and re-defines duplicate wrapper functions, kept so external code importing from `iceberg_loader.iceberg_loader` instead of the package root keeps working. |
 | `catalog.py` | **`get_rest_catalog()`** — factory building a PyIceberg `RestCatalog` from explicit args or env vars (`ICEBERG_REST_URI`, `S3_*`). |
 
 ---

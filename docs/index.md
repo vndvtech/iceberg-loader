@@ -176,7 +176,7 @@ load_data_to_iceberg(table_data=data, table_identifier=("my_db", "my_table"), ca
 
 ### Upsert (Merge Into)
 
-Merge operation (update existing rows, insert new ones) based on key columns. Requires PyIceberg >= 0.7.0.
+Merge operation (update existing rows, insert new ones) based on key columns. Requires PyIceberg >= 0.7.1.
 
 ```python
 config = LoaderConfig(write_mode="upsert", join_cols=["id"])
@@ -398,7 +398,7 @@ See the [Examples](examples.md) page for runnable demos covering streaming, upse
 - Align versions in `pyproject.toml` and `src/iceberg_loader/__about__.py`.
 - Update `RELEASE.md` with highlights/breaking changes.
 - Run `uv lock`, commit `uv.lock` if it changes, then verify it with `uv lock --locked`.
-- Run lint (`uv run ruff check .`), types (`uv run ty check src/iceberg_loader tests`), and tests (`uv run python -m pytest`).
+- Run lint (`uv run ruff check .`), types (`uv run ty check`), and tests (`uv run python -m pytest`).
 - Tag and push (`git tag -a vX.Y.Z -m "Release X.Y.Z"`), let CI publish.
 
 ---

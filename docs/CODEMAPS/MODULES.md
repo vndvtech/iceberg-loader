@@ -12,8 +12,8 @@ Descriptive catalog of all modules in `iceberg-loader`, their public APIs, and d
 
 **Key Files**:
 - `__init__.py` — public re-exports
-- `__about__.py` — single `__version__` string (`0.1.3`)
-- `iceberg_loader.py` — convenience thin wrappers around `IcebergLoader` methods
+- `__about__.py` — single `__version__` string (`0.1.4`)
+- `iceberg_loader.py` — backward-compat shim (`IcebergLoader = CoreIcebergLoader` plus duplicate wrapper functions) kept so external imports from `iceberg_loader.iceberg_loader` keep working
 - `catalog.py` — `get_rest_catalog()` factory for PyIceberg `RestCatalog`
 
 **Dependencies**:

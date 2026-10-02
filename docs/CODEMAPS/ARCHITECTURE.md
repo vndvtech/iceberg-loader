@@ -132,4 +132,4 @@ Public API ──► IcebergLoader ──► core: strategies, schema, config
 | `IcebergLoader.load_data()` | Stateful reuse | `dict` |
 | `IcebergLoader.load_data_batches()` | Batch orchestration | `dict` |
 | `expire_snapshots(table, ...)` | Maintenance utility | `None` |
-| `configure_logging(...)` | Initialize logger | `Logger` |
+| `iceberg_loader.services.logging.configure_logging(...)` | Initialize logger (not top-level exported) | `Logger` |
