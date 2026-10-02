@@ -1,33 +1,31 @@
 """REST Catalog example for iceberg-loader.
 
-This example demonstrates how to use iceberg-loader with a REST Catalog
-(Tabular, Polaris, or any self-hosted Iceberg REST Catalog server).
+This example demonstrates how to use iceberg-loader with an Iceberg REST
+Catalog. By default it targets the local Apache Polaris + MinIO stack that
+ships with ``examples/docker-compose.yml``, so it runs out of the box:
 
-Prerequisites:
-    A running REST Catalog server and MinIO/S3 for storage.
-
-Quick setup with the local docker-compose stack + a REST catalog:
     cd examples
-    docker compose up -d   # starts MinIO + Hive Metastore + Trino
-
-    # Then point to your REST Catalog server via env vars:
-    export ICEBERG_REST_URI="https://api.tabular.io/ws"
-    export ICEBERG_WAREHOUSE="s3://my-bucket/warehouse/"
-    export ICEBERG_CREDENTIAL="your-oauth2-credential"
-
-    # S3 credentials (use defaults for local MinIO):
-    export S3_ENDPOINT="http://localhost:9000"
-    export S3_ACCESS_KEY="minio"
-    export S3_SECRET_KEY="minio123"
-    export S3_REGION="us-east-1"
-
+    docker compose up -d   # MinIO + Hive Metastore + Trino + Polaris
     uv run python rest_catalog_example.py
+
+Every connection setting can be overridden with environment variables to
+point at a remote catalog (Tabular, a self-hosted Polaris, etc.):
+
+    ICEBERG_REST_URI          REST Catalog endpoint (default: http://localhost:8181/api/catalog)
+    ICEBERG_WAREHOUSE         Catalog name (default: datalake)
+    ICEBERG_CREDENTIAL        OAuth2 credential (default: root:root)
+    ICEBERG_OAUTH2_SERVER_URI OAuth2 token endpoint (default: <REST_URI>/v1/oauth/tokens)
+    S3_ENDPOINT               S3 endpoint (default: http://localhost:9000)
+    S3_ACCESS_KEY             S3 access key (default: minio)
+    S3_SECRET_KEY             S3 secret key (default: minio123)
+    S3_REGION                 S3 region (default: us-east-1)
 
 Usage:
     uv run python rest_catalog_example.py
 """
 
 import logging
+import os
 
 import pyarrow as pa
 from pyiceberg.exceptions import NoSuchTableError
@@ -37,11 +35,38 @@ from iceberg_loader import LoaderConfig, get_rest_catalog, load_data_to_iceberg
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+REST_URI = os.environ.get('ICEBERG_REST_URI', 'http://localhost:8181/api/catalog')
+OAUTH2_SERVER_URI = os.environ.get('ICEBERG_OAUTH2_SERVER_URI', f'{REST_URI}/v1/oauth/tokens')
+
+
+def build_catalog():
+    """Build a REST Catalog client for the local Polaris stack (env-overridable)."""
+    return get_rest_catalog(
+        uri=REST_URI,
+        warehouse=os.environ.get('ICEBERG_WAREHOUSE', 'datalake'),
+        credential=os.environ.get('ICEBERG_CREDENTIAL', 'root:root'),
+        s3_endpoint=os.environ.get('S3_ENDPOINT', 'http://localhost:9000'),
+        s3_access_key=os.environ.get('S3_ACCESS_KEY', 'minio'),
+        s3_secret_key=os.environ.get('S3_SECRET_KEY', 'minio123'),
+        s3_region=os.environ.get('S3_REGION', 'us-east-1'),
+        extra_properties={
+            'scope': 'PRINCIPAL_ROLE:ALL',
+            'oauth2-server-uri': OAUTH2_SERVER_URI,
+            # PyIceberg requests vended credentials by default, which Polaris
+            # rejects for a plain root principal. An empty value disables the
+            # delegation header so the static S3 credentials above are used.
+            'header.X-Iceberg-Access-Delegation': '',
+        },
+    )
+
 
 def run_example() -> None:
     """Demonstrate basic ETL with REST Catalog."""
-    catalog = get_rest_catalog()
+    catalog = build_catalog()
     table_id = ('default', 'rest_catalog_example')
+
+    # Polaris does not auto-create namespaces, so ensure "default" exists first.
+    catalog.create_namespace_if_not_exists('default')
 
     # Cleanup any previous run
     try:

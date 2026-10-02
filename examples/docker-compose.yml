@@ -85,3 +85,70 @@ services:
         echo "Bucket datalake is ready."
     depends_on:
       - minio
+
+  # Apache Polaris REST Catalog server (Iceberg REST + Management API).
+  # Persistence is in-memory by default, so the "datalake" catalog is re-created
+  # on every `docker compose up` by the one-shot `polaris-setup` sidecar below.
+  polaris:
+    hostname: polaris
+    image: 'apache/polaris:1.8.0'
+    ports:
+      - '8181:8181'   # Iceberg REST + Management API
+      - '8182:8182'   # Quarkus management (health/metrics)
+    environment:
+      AWS_REGION: us-east-1
+      # The "datalake" catalog created by polaris-setup below has no credentials
+      # in its storageConfigInfo: Polaris's S3 storageConfigInfo has no credential
+      # fields, so the server resolves MinIO access through its own AWS credential
+      # chain — these two env vars. Do not remove them, or the catalog silently
+      # loses access to MinIO.
+      AWS_ACCESS_KEY_ID: minio
+      AWS_SECRET_ACCESS_KEY: minio123
+      POLARIS_BOOTSTRAP_CREDENTIALS: 'POLARIS,root,root'
+      polaris.realm-context.realms: POLARIS
+      quarkus.otel.sdk.disabled: 'true'
+    depends_on:
+      mc-job:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ['CMD', 'curl', '--fail', 'http://localhost:8182/q/health']
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 20s
+
+  # One-shot bootstrap: creates the "datalake" catalog in Polaris pointing at MinIO.
+  # Polaris uses in-memory persistence by default, so this re-runs on every `up`.
+  polaris-setup:
+    image: 'curlimages/curl:8.11.1'
+    depends_on:
+      polaris:
+        condition: service_healthy
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - |
+        set -e
+        attempts=0
+        until TOKEN=$$(curl -s -X POST http://polaris:8181/api/catalog/v1/oauth/tokens \
+          -H 'Content-Type: application/x-www-form-urlencoded' \
+          -d 'grant_type=client_credentials&client_id=root&client_secret=root&scope=PRINCIPAL_ROLE:ALL' \
+          | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p') && [ -n "$$TOKEN" ]; do
+          attempts=$$((attempts + 1))
+          if [ "$$attempts" -ge 30 ]; then
+            echo "Failed to obtain Polaris OAuth token" >&2
+            exit 1
+          fi
+          echo "Waiting for Polaris to be ready..."
+          sleep 2
+        done
+        CODE=$$(curl -s -o /tmp/polaris-catalog.json -w '%{http_code}' \
+          -X POST http://polaris:8181/api/management/v1/catalogs \
+          -H "Authorization: Bearer $$TOKEN" \
+          -H 'Content-Type: application/json' \
+          -H 'Polaris-Realm: POLARIS' \
+          -d '{"catalog":{"name":"datalake","type":"INTERNAL","readOnly":false,"properties":{"default-base-location":"s3://datalake/warehouse"},"storageConfigInfo":{"storageType":"S3","allowedLocations":["s3://datalake/warehouse"],"endpoint":"http://localhost:9000","endpointInternal":"http://minio:9000","pathStyleAccess":true,"region":"us-east-1"}}}')
+        case "$$CODE" in
+          200|201) echo "Created Polaris catalog 'datalake'." ;;
+          409) echo "Polaris catalog 'datalake' already exists." ;;
+          *) echo "Failed to create Polaris catalog (HTTP $$CODE):" >&2; cat /tmp/polaris-catalog.json >&2; exit 1 ;;
+        esac
