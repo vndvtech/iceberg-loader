@@ -3,25 +3,24 @@
 [![PyPI - Version](https://img.shields.io/pypi/v/iceberg-loader.svg)](https://pypi.org/project/iceberg-loader)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/iceberg-loader.svg)](https://pypi.org/project/iceberg-loader)
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/iceberg-loader.svg)](https://pypi.org/project/iceberg-loader)
-[![Coverage](https://img.shields.io/badge/coverage-88%25-brightgreen)](coverage.xml)
 [![CI](https://github.com/vndvtech/iceberg-loader/actions/workflows/ci.yml/badge.svg)](https://github.com/vndvtech/iceberg-loader/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 📚 [Documentation](https://vndvtech.github.io/iceberg-loader/)
 
-A convenience wrapper around [PyIceberg](https://py.iceberg.apache.org/) that simplifies data loading into Apache Iceberg tables. PyArrow-first, handles messy JSON, schema evolution, idempotent replace, upsert, batching, and streaming out of the box.
+iceberg-loader wraps [PyIceberg](https://py.iceberg.apache.org/) to load data into Apache Iceberg tables. It uses PyArrow and handles mixed JSON fields, schema evolution, idempotent replacement, upserts, batching, and streaming.
 
 
-> **Status:** Actively developed and under testing. PRs are welcome!
+> **Status:** Actively developed and under testing.
 > Tested against Hive Metastore and REST Catalog (Tabular, Polaris, self-hosted).
 
 ## Why iceberg-loader?
 
-- **Messy JSON friendly:** auto-serializes dict/list/mixed fields to strings so writes don't fail.
-- **Schema evolution:** add columns on the fly (opt-in), preserves field IDs.
-- **Safe writes:** append/overwrite, idempotent replace via `replace_filter`, upsert.
-- **Stream friendly:** commit intervals, batches, IPC streams.
-- **Single config:** `LoaderConfig` sets defaults; override per-call if needed.
+- **Mixed JSON fields:** converts dict and list values to strings before writing, including fields with mixed types.
+- **Schema evolution:** adds columns when enabled and preserves field IDs.
+- **Write modes:** append, overwrite, idempotent replacement via `replace_filter`, and upsert.
+- **Streaming:** commit intervals, batches, and IPC streams.
+- **Configuration:** `LoaderConfig` sets defaults that can be overridden per call.
 
 ## Install
 
@@ -114,7 +113,7 @@ catalog = load_catalog("my-rest-catalog")
 
 ## Preparing Data
 
-Use helpers to convert Python dictionaries to Arrow format (handling messy types automatically):
+These helpers convert Python dictionaries to Arrow data, including mixed fields:
 
 ```python
 from iceberg_loader.utils.arrow import create_arrow_table_from_data, create_record_batches_from_dicts
@@ -128,31 +127,34 @@ batches = create_record_batches_from_dicts(data_generator(), batch_size=10000)
 
 Alternatively, use standard PyArrow conversion: `pa.Table.from_pylist(data)`.
 
+The helpers serialize dicts and lists as JSON and convert other non-null values to strings too. For example, an integer `id` becomes an Arrow string. If you need to preserve scalar types, prepare a typed Arrow table with PyArrow instead.
+
+For timestamp columns, prefer partition transforms such as `day(ts)` or `hour(ts)`, especially when using `load_timestamp`.
+
 ## Public API & Stability
 
-- Public surface: `LoaderConfig`, `load_data_to_iceberg`, `load_batches_to_iceberg`, `load_ipc_stream_to_iceberg`.
-- Everything else is internal and may change without notice; always pass options via `LoaderConfig`.
+- Top-level exports include `LoaderConfig`, `IcebergLoader`, `load_data_to_iceberg`, `load_batches_to_iceberg`, `load_ipc_stream_to_iceberg`, `get_rest_catalog`, and `expire_snapshots`.
+- Data conversion helpers are available from `iceberg_loader.utils.arrow`. Pass loading options via `LoaderConfig`.
 - Avoid legacy positional arguments—use the `config` parameter only.
 - LoaderConfig validates partition expressions and rejects unsafe combos (e.g., `replace_filter` with `upsert`, identity partition on `_load_dttm`).
 
 ## How we version
 
 - Semantic Versioning starting at `0.1.x`: **MINOR** for compatible features, **PATCH** for fixes, **MAJOR** for breaking API changes.
-- Breaking changes only happen on the public surface noted above.
-- Prefer partition transforms for timestamps (`day(ts)`, `hour(ts)`), especially when using `load_timestamp`.
+- Breaking changes to documented APIs are noted in `RELEASE.md`.
 
 ## Release checklist
 
 - Bump version in `pyproject.toml` and `src/iceberg_loader/__about__.py` (they must match).
 - Update `RELEASE.md` with highlights and breaking notes.
-- Run `uv lock --locked` and commit `uv.lock` if it changes.
+- Run `uv lock`, commit `uv.lock` if it changes, then verify it with `uv lock --locked`.
 - Run `uv run ruff check .`, `uv run ty check`, and `uv run python -m pytest`.
 - Tag and push (`git tag -a vX.Y.Z ...`), then let CI publish.
 
 
 ## Contributing
 
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, coding style, and PR guidelines.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, coding style, and PR guidelines.
 
 ```bash
 uv run ruff check . && uv run ruff format --check . && uv run ty check
@@ -160,8 +162,6 @@ uv run pytest
 ```
 
 ## Contributors
-
-Thanks to all contributors who have helped make this project better!
 
 <a href="https://github.com/vndvtech/iceberg-loader/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=vndvtech/iceberg-loader" />

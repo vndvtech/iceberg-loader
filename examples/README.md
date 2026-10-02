@@ -1,12 +1,11 @@
 # Examples
 
-This directory contains runnable examples demonstrating various features of `iceberg-loader`.
+These examples show data loading, catalog connections, and maintenance with `iceberg-loader`.
 
 ## Prerequisites
 
-You need a running Iceberg catalog and MinIO/S3.
-A `docker-compose.yml` is provided to spin up a local Hive Metastore + MinIO + Trino
-environment, plus an Apache Polaris REST Catalog server.
+You need a running Iceberg catalog and MinIO/S3. The bundled `docker-compose.yml`
+starts Hive Metastore, MinIO, Trino, and an Apache Polaris REST Catalog server.
 
 ```bash
 cd examples
@@ -20,28 +19,28 @@ The bundled stack includes:
 - **Trino** at `http://localhost:8080`
 - **Apache Polaris** REST Catalog at `http://localhost:8181/api/catalog` (`root`/`root`)
 
-`rest_catalog_example.py` runs out of the box against the bundled Polaris catalog.
-To point it at a remote catalog (Tabular, a self-hosted Polaris, etc.), override the
-defaults with environment variables:
+`rest_catalog_example.py` uses the bundled Polaris catalog by default. For a remote
+catalog such as Tabular or a separate Polaris server, set these environment variables:
 
 ```bash
 export ICEBERG_REST_URI="https://your-rest-catalog-server.com/api"
 export ICEBERG_WAREHOUSE="your-catalog-name"
 export ICEBERG_CREDENTIAL="your-oauth2-credential"
 export ICEBERG_OAUTH2_SERVER_URI="https://your-rest-catalog-server.com/api/v1/oauth/tokens"
-export S3_ENDPOINT="http://localhost:9000"
-export S3_ACCESS_KEY="minio"
-export S3_SECRET_KEY="minio123"
-export S3_REGION="us-east-1"
+export S3_ENDPOINT="https://your-s3-endpoint"
+export S3_ACCESS_KEY="your-s3-access-key"
+export S3_SECRET_KEY="your-s3-secret-key"
+export S3_REGION="your-s3-region"
 ```
+
+Set the S3 variables to values for the remote catalog's storage. The example defaults to local MinIO when they are unset.
 
 Alternatively, copy `examples/pyiceberg.yaml.sample` to `~/.pyiceberg.yaml`, adjust the values,
 and use `load_catalog("my-rest-catalog")` instead of the direct constructor.
 
 > **Polaris persistence caveat:** the bundled Polaris server uses in-memory persistence,
-> so the `datalake` catalog is wiped whenever the Polaris container restarts. The one-shot
-> `polaris-setup` sidecar re-creates it on every `docker compose up`, which is fine for the
-> examples stack but not for durable data.
+> so the `datalake` catalog is wiped whenever the Polaris container restarts. The
+> `polaris-setup` sidecar re-creates it on every `docker compose up`.
 
 Trino connection:
 
@@ -61,14 +60,16 @@ access_key: minio
 secret_key: minio123
 ```
 
-## Install dependencies with UV
+## Install dependencies with uv
+
+From the repository root, install the project's dependencies and run the examples against this checkout:
 
 ```bash
-uv init --python3.14
-uv add "iceberg-loader[all]"
+uv sync --all-extras
+cd examples
 ```
 
-## Running Examples
+## Run the examples
 
 Run from the `examples/` directory with `uv`:
 
@@ -108,9 +109,8 @@ Run the local smoke subset:
 bash ../tools/run_examples_smoke.sh
 ```
 
-This smoke suite covers the fast local examples that only depend on the bundled Docker stack,
-including `rest_catalog_example.py` (backed by the bundled Polaris catalog).
-It intentionally skips:
+The smoke suite runs the fast examples against the bundled Docker stack, including
+`rest_catalog_example.py`. It skips:
 
 - `load_from_api.py`: depends on an external public API.
 - `load_stream.py`: writes a very large in-memory IPC stream and is too heavy for routine smoke checks.
