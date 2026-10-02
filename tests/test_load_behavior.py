@@ -201,6 +201,7 @@ def test_empty_iterator_creates_no_table(sql_catalog: SqlCatalog) -> None:
     result = load_batches_to_iceberg(iter([]), TID, sql_catalog, APPEND)
 
     assert result['rows_loaded'] == 0
+    assert result['batches_processed'] == 0
     assert result['table_location'] == 'none'
     assert result['snapshot_id'] == 'none'
     assert not sql_catalog.table_exists(TID)

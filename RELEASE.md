@@ -5,7 +5,7 @@
 - **Change**: For new tables, the load timestamp column now appears before columns added later by schema evolution. A first buffer of `[id]` then `[id, x]` with `load_timestamp` set now yields column order `['id', '_load_dttm', 'x']` (previously `['id', 'x', '_load_dttm']`).
 
 ## Breaking Changes
-- New tables created with `load_timestamp` and `schema_evolution` may have a different column order than before. Existing tables are unaffected.
+- New tables created with `load_timestamp` and `schema_evolution` have a different column order **only when** the first commit buffer contains batches with different schemas (i.e. `commit_interval > 1`). Existing tables are unaffected.
 
 ## Test Plan
 - `uv run pytest -v`
