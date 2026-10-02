@@ -116,3 +116,8 @@ coverage.xml
 
 # Mypy
 .mypy_cache/
+
+# Local tooling
+.codegraph/
+.serena/
+docs/superpowers/
