@@ -204,3 +204,29 @@ def test_empty_iterator_creates_no_table(sql_catalog: SqlCatalog) -> None:
     assert result['table_location'] == 'none'
     assert result['snapshot_id'] == 'none'
     assert not sql_catalog.table_exists(TID)
+
+
+def test_mixed_buffer_keeps_partition_on_load_timestamp(sql_catalog: SqlCatalog) -> None:
+    batches = [batch(id=[1]), batch(id=[2], extra=['x'])]
+    config = LoaderConfig(
+        write_mode='append',
+        schema_evolution=True,
+        commit_interval=2,
+        load_timestamp=datetime(2025, 1, 1),
+        partition_col='day(_load_dttm)',
+    )
+
+    load_batches_to_iceberg(iter(batches), TID, sql_catalog, config)
+
+    assert [f.name for f in sql_catalog.load_table(TID).spec().fields] == ['_load_dttm_day']
+
+
+def test_reused_loader_keeps_loads_separate(sql_catalog: SqlCatalog) -> None:
+    loader = IcebergLoader(sql_catalog)
+
+    loader.load_data(pa.table({'id': [1]}), ('default', 'first'), APPEND)
+    second = loader.load_data(pa.table({'id': [2]}), ('default', 'second'), APPEND)
+
+    assert read_rows(sql_catalog, ('default', 'first')) == [{'id': 1}]
+    assert read_rows(sql_catalog, ('default', 'second')) == [{'id': 2}]
+    assert second['new_table_created'] is True
