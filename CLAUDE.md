@@ -14,6 +14,8 @@ uv run pytest
 # Run a single test file
 uv run pytest tests/test_iceberg_loader.py
 
+# Tests use a real sqlite-backed SqlCatalog via the `sql_catalog` fixture (tests/conftest.py)
+
 # Run tests with coverage
 uv run pytest --cov=iceberg_loader --cov-report=html
 
@@ -39,7 +41,8 @@ The library is a thin convenience wrapper around PyIceberg for loading PyArrow d
 - `LoaderConfig` — Pydantic config model; all options go here
 
 **Core layer** (`src/iceberg_loader/core/`):
-- `loader.py` — `IcebergLoader` is the main orchestrator. `load_data_batches` is the central method: it buffers batches, calls `SchemaManager` to create/evolve the table, then delegates writes to the selected `WriteStrategy`.
+- `loader.py` — `IcebergLoader` is the main orchestrator. `load_data_batches` buffers batches up to `commit_interval`, hands each buffer to `BatchConformer`, then delegates writes to the selected `WriteStrategy`.
+- `conform.py` — `BatchConformer` (one per load) owns the target table: loads or creates it, appends the load timestamp column, evolves the schema, and casts data to the table schema (failed casts become NULL with a warning).
 - `config.py` — `LoaderConfig` (frozen Pydantic model). Validates partition expressions, rejects invalid combos (`replace_filter` + `upsert`, identity partition on the load timestamp column). Default table properties (Parquet/zstd, format v2, commit retry) live here as `TABLE_PROPERTIES`.
 - `strategies.py` — Strategy pattern for writes: `AppendStrategy`, `OverwriteStrategy` (overwrites on first batch, appends after), `IdempotentStrategy` (delete-then-append via `replace_filter`), `UpsertStrategy` (PyIceberg Merge Into). Selected by `get_write_strategy()`.
 - `schema.py` — `SchemaManager` converts Arrow↔Iceberg schemas, creates tables, and handles schema evolution (adds new columns only, top-level).

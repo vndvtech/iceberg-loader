@@ -1,14 +1,12 @@
 import io
-from unittest.mock import MagicMock
 
 import pyarrow as pa
-from pyiceberg.exceptions import NoSuchTableError
+from pyiceberg.catalog.sql import SqlCatalog
 
-from iceberg_loader import IcebergLoader
-from iceberg_loader.core.config import LoaderConfig
+from iceberg_loader import LoaderConfig, load_ipc_stream_to_iceberg
 
 
-def test_load_ipc_stream() -> None:
+def test_load_ipc_stream(sql_catalog: SqlCatalog) -> None:
     schema = pa.schema([pa.field('id', pa.int64()), pa.field('value', pa.string())])
     sink = io.BytesIO()
     with pa.ipc.new_stream(sink, schema) as writer:
@@ -19,25 +17,12 @@ def test_load_ipc_stream() -> None:
             )
             writer.write_batch(batch)
     sink.seek(0)
+    identifier = ('default', 'streaming_test')
 
-    mock_table = MagicMock()
-    mock_txn = mock_table.transaction.return_value.__enter__.return_value
+    result = load_ipc_stream_to_iceberg(sink, identifier, sql_catalog, LoaderConfig(write_mode='append'))
 
-    mock_catalog = MagicMock()
-    mock_catalog.load_table.side_effect = [NoSuchTableError, mock_table]
-
-    loader = IcebergLoader(mock_catalog)
-    expected_iceberg_schema = loader.schema_manager._arrow_to_iceberg(schema)
-    mock_table.schema.return_value = expected_iceberg_schema
-
-    config = LoaderConfig(write_mode='append')
-    result = loader.load_ipc_stream(
-        stream_source=sink,
-        table_identifier=('default', 'streaming_test'),
-        config=config,
-    )
-
-    mock_catalog.create_table.assert_called_once()
-    assert mock_txn.append.call_count == 2
+    table = sql_catalog.load_table(identifier)
+    assert table.scan().to_arrow().sort_by('id').column('id').to_pylist() == [0, 1, 2, 3]
+    assert len(list(table.snapshots())) == 2
     assert result['rows_loaded'] == 4
     assert result['batches_processed'] == 2

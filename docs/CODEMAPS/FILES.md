@@ -14,6 +14,7 @@ iceberg-loader/
 │       ├── __about__.py         # Version string
 │       ├── iceberg_loader.py    # Thin convenience wrappers
 │       ├── core/                 # Core architecture
+│       │   └── conform.py        # BatchConformer: conform batch buffers to table
 │       ├── utils/                # Arrow/Iceberg type utilities
 │       └── services/             # Logging & maintenance
 ├── tests/                        # Test suite (pytest)
@@ -52,7 +53,8 @@ iceberg-loader/
 | File | Purpose |
 |------|---------|
 | `__init__.py` | Re-exports all public core symbols (classes, functions, `TABLE_PROPERTIES`). |
-| `loader.py` | **`IcebergLoader`** facade. Central orchestration: buffering, schema normalization, type conversion, write delegation. Entry point for all ingestion flows. |
+| `loader.py` | **`IcebergLoader`** facade. Central orchestration: buffering, write delegation. Entry point for all ingestion flows. |
+| `conform.py` | **`BatchConformer`** — per-load table resolution, load timestamp, schema evolution, type casting. |
 | `config.py` | **`LoaderConfig`** frozen Pydantic model. Default `TABLE_PROPERTIES`. Input validation for partition strings, combo rules, column names. |
 | `schema.py` | **`SchemaManager`** — table create/load, schema evolution (add columns), Arrow↔Iceberg schema conversion, partition spec creation. |
 | `strategies.py` | Strategy pattern for writes: `AppendStrategy`, `OverwriteStrategy`, `IdempotentStrategy`, `UpsertStrategy`, `get_write_strategy()`. |
@@ -84,6 +86,9 @@ iceberg-loader/
 
 | File | Coverage |
 |------|----------|
+| `conftest.py` | `sql_catalog` fixture: sqlite-backed SqlCatalog per test |
+| `test_load_behavior.py` | End-to-end load behavior against a real catalog |
+| `test_conform.py` | BatchConformer interface tests |
 | `test_iceberg_loader.py` | `IcebergLoader` integration tests (load_data, load_batches, upsert, partition, etc.) |
 | `test_config_validation.py` | `LoaderConfig` validators (partition strings, combo errors, defaults) |
 | `test_partitioning.py` | `partitioning.py` functions (parsing, transform instantiation) |
