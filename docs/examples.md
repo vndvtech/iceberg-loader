@@ -1,15 +1,22 @@
 # Examples
 
-Runnable examples demonstrating various features of `iceberg-loader`. All examples are located in the [`examples/`](https://github.com/vndvtech/iceberg-loader/tree/main/examples) directory.
+The scripts in [`examples/`](https://github.com/vndvtech/iceberg-loader/tree/main/examples) cover loading, catalog setup, and maintenance.
 
 ## Prerequisites
 
-You need a running Iceberg catalog (e.g., Hive Metastore) and MinIO/S3. Use the bundled `docker-compose.yml` to start a local stack (run from repo root):
+You need a running Iceberg catalog and MinIO/S3. The bundled `docker-compose.yml` starts a local stack (run from the `examples/` directory):
 
 ```bash
 cd examples
 docker compose up -d
 ```
+
+The bundled stack includes:
+
+- **MinIO** (S3) at `http://localhost:9000` (console `http://localhost:9001`, `minio`/`minio123`)
+- **Hive Metastore** at `thrift://localhost:9083`
+- **Trino** at `http://localhost:8080`
+- **Apache Polaris** REST Catalog at `http://localhost:8181/api/catalog` (`root`/`root`)
 
 Then run examples from the same `examples/` directory (see commands below). With `uv` you can prefix any command as `uv run python <script.py>`.
 
@@ -18,7 +25,6 @@ Then run examples from the same `examples/` directory (see commands below). With
 | Example | Description |
 |---------|-------------|
 | [`load_with_commits.py`](https://github.com/vndvtech/iceberg-loader/blob/main/examples/load_with_commits.py) | Commit interval for long streams |
-| [`load_batches.py`](https://github.com/vndvtech/iceberg-loader/blob/main/examples/load_batches.py) | Loading data in batches using `load_batches_to_iceberg` |
 | [`load_upsert.py`](https://github.com/vndvtech/iceberg-loader/blob/main/examples/load_upsert.py) | Upsert (merge) by key columns |
 | [`advanced_scenarios.py`](https://github.com/vndvtech/iceberg-loader/blob/main/examples/advanced_scenarios.py) | Schema evolution, custom types, partitioning |
 | [`load_complex_json.py`](https://github.com/vndvtech/iceberg-loader/blob/main/examples/load_complex_json.py) | Messy JSON handling |
@@ -31,6 +37,8 @@ Then run examples from the same `examples/` directory (see commands below). With
 | [`load_stream.py`](https://github.com/vndvtech/iceberg-loader/blob/main/examples/load_stream.py) | Arrow IPC stream loading |
 | [`load_from_api.py`](https://github.com/vndvtech/iceberg-loader/blob/main/examples/load_from_api.py) | Simulated REST API ingestion |
 | [`maintenance_example.py`](https://github.com/vndvtech/iceberg-loader/blob/main/examples/maintenance_example.py) | Snapshot expiration |
+| [`rest_catalog_example.py`](https://github.com/vndvtech/iceberg-loader/blob/main/examples/rest_catalog_example.py) | REST Catalog setup (Polaris/Tabular) with `get_rest_catalog()` |
+| [`load_timestamp_partitioning.py`](https://github.com/vndvtech/iceberg-loader/blob/main/examples/load_timestamp_partitioning.py) | `_load_dttm` load timestamp + time-transform partitioning |
 
 ## Running
 
@@ -41,28 +49,32 @@ cd examples
 
 # Core
 python load_with_commits.py
-python load_batches.py
 python load_upsert.py
 python advanced_scenarios.py
 python load_complex_json.py
+python compare_complex_json_fail.py
 
 # Other
 python load_stream.py
 python load_from_api.py
 python maintenance_example.py
+python rest_catalog_example.py
+python load_timestamp_partitioning.py
 ```
 
 With [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv run python load_with_commits.py
-uv run python load_batches.py
 uv run python load_upsert.py
 uv run python advanced_scenarios.py
 uv run python load_complex_json.py
+uv run python compare_complex_json_fail.py
 uv run python load_stream.py
 uv run python load_from_api.py
 uv run python maintenance_example.py
+uv run python rest_catalog_example.py
+uv run python load_timestamp_partitioning.py
 ```
 
 ---
@@ -121,7 +133,7 @@ load_data_to_iceberg(data, ("db", "users"), catalog, config=config)
 
 ### Dynamic Configuration (Multi-table Load)
 
-When loading multiple tables in a loop, you can dynamically switch `LoaderConfig` for each table:
+Choose a `LoaderConfig` for each table in a loop:
 
 ```python
 # Define configurations
@@ -148,7 +160,7 @@ for endpoint in endpoints:
 
 ### Messy JSON
 
-iceberg-loader auto-serializes mixed/nested types to JSON strings when PyArrow would fail:
+For mixed or nested values that PyArrow cannot convert directly, `iceberg-loader` serializes dicts and lists as JSON strings:
 
 ```python
 from iceberg_loader import LoaderConfig, load_data_to_iceberg
@@ -168,7 +180,7 @@ load_data_to_iceberg(data, ("db", "events"), catalog, config=config)
 
 ### Schema Evolution
 
-Automatically add new columns when data schema changes:
+Set `schema_evolution=True` to add columns found in incoming data:
 
 ```python
 config = LoaderConfig(write_mode="append", schema_evolution=True)
