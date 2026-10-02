@@ -10,7 +10,7 @@ How `iceberg-loader` moves Arrow data through schema handling and write strategi
 
 The main responsibilities are:
 - `IcebergLoader` buffers input and coordinates writes.
-- `WriteStrategy` selects the behavior for append, overwrite, replacement, or upsert.
+- `WriteStrategy` selects the behavior for append, overwrite, idempotent replace, or upsert.
 - `LoaderConfig` holds validated write options in a frozen Pydantic model.
 - `SchemaManager` creates tables and adds columns when schema evolution is enabled.
 - `convert_table_types` casts Arrow data to the table schema.

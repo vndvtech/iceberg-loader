@@ -317,7 +317,7 @@ def load_batches_to_iceberg(
 ) -> dict[str, Any]
 ```
 
-Pass write options through `LoaderConfig`; the table above lists its fields.
+Pass write options **only** through `LoaderConfig`; the table above lists its fields.
 
 #### Return Value
 
