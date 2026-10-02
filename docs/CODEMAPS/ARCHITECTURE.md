@@ -55,7 +55,7 @@ pa.Table ──► split to RecordBatches ──► IcebergLoader.load_data() �
 ### 2. Streaming Batch Load (`load_batches_to_iceberg`)
 
 ```
-Iterator[RecordBatch] ──► buffer up to commit_interval ──► _process_batch_buffer() ──► schema evolution ──► type conversion ──► WriteStrategy.write()
+Iterator[RecordBatch] ──► buffer up to commit_interval ──► BatchConformer.conform() ──► WriteStrategy.write()
 ```
 
 ### 3. IPC Stream Load (`load_ipc_stream_to_iceberg`)
@@ -64,16 +64,17 @@ Iterator[RecordBatch] ──► buffer up to commit_interval ──► _process_
 IPC stream file/socket ──► pa.ipc.open_stream() ──► RecordBatchReader ──► load_data_batches()
 ```
 
-### 4. Internal Batch Processing (`_process_batch_buffer`)
+### 4. Internal Batch Processing (`BatchConformer.conform`)
 
 ```
-pending_batches[]
+buffer of RecordBatches
        │
-       ├─ schema evolution (config.schema_evolution=True)
        ├─ add load_timestamp column (config.load_timestamp)
-       ├─ ensure table exists
-       ├─ convert_table_types() — cast to target Arrow schema
-       └─ strategy.write(table, combined_table, is_first_write)
+       ├─ without schema_evolution: concat (mixed schemas → pa.ArrowInvalid)
+       ├─ ensure table exists (first call only; partition spec sees the load timestamp column)
+       ├─ evolve: load timestamp column; with schema_evolution, every distinct batch schema
+       └─ convert_table_types() — cast to target Arrow schema
+then IcebergLoader: strategy.write(conformer.table, data, is_first_write)
 ```
 
 ---
@@ -82,6 +83,9 @@ pending_batches[]
 
 ### `IcebergLoader`
 **Role**: Facade / orchestrator. Manages catalog, config resolution, buffering, and delegates schema + write operations.
+
+### `BatchConformer`
+**Role**: Per-load conform step. Owns the target table and turns each batch buffer into a table-shaped `pa.Table`.
 
 ### `SchemaManager`
 **Role**: Table lifecycle + schema evolution.

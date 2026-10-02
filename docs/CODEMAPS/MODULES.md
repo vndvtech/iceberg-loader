@@ -69,21 +69,36 @@ from iceberg_loader import IcebergLoader, LoaderConfig, load_data_to_iceberg
 
 #### `loader.py`
 **Key Files**:
-- `IcebergLoader` — facade; buffers batches, ensures table exists, evolves schema, casts types, delegates writes
+- `IcebergLoader` — facade; buffers batches, delegates conforming to BatchConformer and writes to WriteStrategy
 - `load_data_to_iceberg()` / `load_batches_to_iceberg()` / `load_ipc_stream_to_iceberg()` — thin wrappers
 
 **Dependencies**:
 - `core.config` (`LoaderConfig`, `TABLE_PROPERTIES`)
+- `core.conform` (`BatchConformer`)
 - `core.schema` (`SchemaManager`)
 - `core.strategies` (`get_write_strategy`)
-- `utils.arrow` (`convert_table_types`)
-- `services.logging` (`logger`)
 
 **Exports**:
 - `IcebergLoader(catalog, table_properties, default_config)`
   - `.load_data(table_data, table_identifier, config)`
   - `.load_data_batches(batch_iterator, table_identifier, config)`
   - `.load_ipc_stream(stream_source, table_identifier, config)`
+
+---
+
+#### `conform.py`
+**Key Files**:
+- `BatchConformer` — per-load; table resolution/creation, load timestamp, schema evolution, casting
+
+**Dependencies**:
+- `core.config` (`LoaderConfig`)
+- `core.schema` (`SchemaManager`)
+- `utils.arrow` (`convert_table_types`)
+
+**Exports**:
+- `BatchConformer(schema_manager, table_identifier, config, table_properties)`
+  - `.conform(batches) -> pa.Table`
+  - `.table`, `.new_table_created`
 
 ---
 
@@ -243,7 +258,8 @@ from iceberg_loader import IcebergLoader, LoaderConfig, load_data_to_iceberg
 
 | Module | Primary Test File |
 |--------|-------------------|
-| `core.loader` | `tests/test_iceberg_loader.py` |
+| `core.loader` | `tests/test_load_behavior.py`, `tests/test_iceberg_loader.py` |
+| `core.conform` | `tests/test_conform.py` |
 | `core.config` | `tests/test_config_validation.py` |
 | `core.partitioning` | `tests/test_partitioning.py` |
 | `utils.arrow` | `tests/test_arrow_utils.py` |

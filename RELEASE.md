@@ -1,3 +1,24 @@
+# Release 0.1.4 — 2026-10-02
+
+## Highlights
+- **Fix**: A mixed-schema batch buffer with a `day(_load_dttm)` partition now creates a partitioned table. The load timestamp column is added before table creation, so the partition spec can reference it.
+- **Change**: For new tables, the load timestamp column now appears before columns added later by schema evolution. A first buffer of `[id]` then `[id, x]` with `load_timestamp` set now yields column order `['id', '_load_dttm', 'x']` (previously `['id', 'x', '_load_dttm']`).
+
+## Breaking Changes
+- New tables created with `load_timestamp` and `schema_evolution` have a different column order **only when** the first commit buffer contains batches with different schemas (i.e. `commit_interval > 1`). Existing tables are unaffected.
+
+## Test Plan
+- `uv run pytest -v`
+- `uv run ruff check . && uv run ruff format --check . && uv run ty check`
+
+## Release Steps
+1) Ensure version is set to `0.1.4`.
+2) Tag and push:
+   ```bash
+   git tag -a v0.1.4 -m "Release 0.1.4"
+   git push origin v0.1.4
+   ```
+
 # Release 0.1.3 — 2026-04-23
 
 ## Highlights
