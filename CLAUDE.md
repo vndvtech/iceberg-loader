@@ -67,5 +67,5 @@ The library is a thin convenience wrapper around PyIceberg for loading PyArrow d
 ## Versioning & Release
 
 - Bump version in both `pyproject.toml` and `src/iceberg_loader/__about__.py` (must match).
-- Update `RELEASE.md` and run `uv lock --locked` before tagging.
+- Update `RELEASE.md`, run `uv lock`, commit `uv.lock` if it changes, then verify it with `uv lock --locked` before tagging.
 - Tag format: `git tag -a vX.Y.Z` — CI publishes to PyPI automatically.

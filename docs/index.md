@@ -389,7 +389,7 @@ See the [Examples](examples.md) page for runnable demos covering streaming, upse
 ## How we version
 
 - Semantic Versioning from `0.1.x`: MINOR = new compatible features, PATCH = fixes, MAJOR = breaking changes.
-- Public API: `LoaderConfig`, `load_data_to_iceberg`, `load_batches_to_iceberg`, `load_ipc_stream_to_iceberg`; other modules are internal.
+- Public API: `LoaderConfig`, `IcebergLoader`, `load_data_to_iceberg`, `load_batches_to_iceberg`, `load_ipc_stream_to_iceberg`, `get_rest_catalog`, `expire_snapshots`; other modules are internal.
 - Prefer partition transforms for timestamps (`day(ts)`, `hour(ts)`, `day(_load_dttm)`) to avoid unbounded partition counts.
 - LoaderConfig validates partition expressions and forbids unsafe mixes (e.g., `replace_filter` with `upsert`, identity partition on `_load_dttm`).
 
@@ -397,7 +397,7 @@ See the [Examples](examples.md) page for runnable demos covering streaming, upse
 
 - Align versions in `pyproject.toml` and `src/iceberg_loader/__about__.py`.
 - Update `RELEASE.md` with highlights/breaking changes.
-- Run `uv lock --locked` and commit `uv.lock` if it changes.
+- Run `uv lock`, commit `uv.lock` if it changes, then verify it with `uv lock --locked`.
 - Run lint (`uv run ruff check .`), types (`uv run ty check src/iceberg_loader tests`), and tests (`uv run python -m pytest`).
 - Tag and push (`git tag -a vX.Y.Z -m "Release X.Y.Z"`), let CI publish.
 
