@@ -8,7 +8,7 @@ You need a running Iceberg catalog (e.g., Hive Metastore) and MinIO/S3. Use the 
 
 ```bash
 cd examples
-docker-compose up -d
+docker compose up -d
 ```
 
 Then run examples from the same `examples/` directory (see commands below). With `uv` you can prefix any command as `uv run python <script.py>`.
