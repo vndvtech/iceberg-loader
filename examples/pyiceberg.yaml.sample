@@ -28,12 +28,18 @@ catalog:
     # s3.access-key-id: AKIAIOSFODNN7EXAMPLE
     # s3.secret-access-key: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 
-  # Example: local MinIO with a self-hosted REST catalog (e.g. Apache Polaris)
+  # Example: local MinIO with the bundled Apache Polaris REST catalog.
+  # `warehouse` is the Polaris catalog name (not an S3 URI); the catalog's
+  # base location is configured server-side via the Management API.
   local-polaris:
     type: rest
     uri: http://localhost:8181/api/catalog
-    warehouse: s3://datalake/warehouse/
+    warehouse: datalake
     credential: root:root
+    scope: PRINCIPAL_ROLE:ALL
+    # Disable vended credentials (Polaris rejects the delegation request for a
+    # plain root principal); the static S3 keys below are used instead.
+    header.X-Iceberg-Access-Delegation: ""
     s3.endpoint: http://localhost:9000
     s3.access-key-id: minio
     s3.secret-access-key: minio123

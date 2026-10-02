@@ -25,6 +25,23 @@ if [[ "$status" != "healthy" ]]; then
   exit 1
 fi
 
+echo "Waiting for the Polaris catalog bootstrap to complete..."
+for _ in {1..60}; do
+  setup_status="$(docker inspect --format '{{.State.Status}}' examples-polaris-setup-1 2>/dev/null || true)"
+  if [[ "$setup_status" == "exited" ]]; then
+    break
+  fi
+  sleep 2
+done
+
+setup_exit="$(docker inspect --format '{{.State.ExitCode}}' examples-polaris-setup-1 2>/dev/null || true)"
+if [[ "$setup_exit" != "0" ]]; then
+  echo "Polaris catalog bootstrap did not succeed (exit code: ${setup_exit:-unknown})"
+  docker compose ps
+  docker compose logs polaris polaris-setup
+  exit 1
+fi
+
 examples=(
   "load_upsert.py"
   "load_complex_json.py"
@@ -33,6 +50,7 @@ examples=(
   "advanced_scenarios.py"
   "load_timestamp_partitioning.py"
   "maintenance_example.py"
+  "rest_catalog_example.py"
 )
 
 for example in "${examples[@]}"; do

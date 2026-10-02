@@ -5,20 +5,30 @@ This directory contains runnable examples demonstrating various features of `ice
 ## Prerequisites
 
 You need a running Iceberg catalog and MinIO/S3.
-A `docker-compose.yml` is provided to spin up a local Hive Metastore + MinIO environment.
+A `docker-compose.yml` is provided to spin up a local Hive Metastore + MinIO + Trino
+environment, plus an Apache Polaris REST Catalog server.
 
 ```bash
 cd examples
 docker compose up -d
 ```
 
-For the REST Catalog example (`rest_catalog_example.py`), you need a REST Catalog server
-(Tabular, Polaris, or self-hosted). Set these environment variables:
+The bundled stack includes:
+
+- **MinIO** (S3) at `http://localhost:9000` (console `http://localhost:9001`, `minio`/`minio123`)
+- **Hive Metastore** at `thrift://localhost:9083`
+- **Trino** at `http://localhost:8080`
+- **Apache Polaris** REST Catalog at `http://localhost:8181/api/catalog` (`root`/`root`)
+
+`rest_catalog_example.py` runs out of the box against the bundled Polaris catalog.
+To point it at a remote catalog (Tabular, a self-hosted Polaris, etc.), override the
+defaults with environment variables:
 
 ```bash
 export ICEBERG_REST_URI="https://your-rest-catalog-server.com/api"
-export ICEBERG_WAREHOUSE="s3://my-bucket/warehouse/"
+export ICEBERG_WAREHOUSE="your-catalog-name"
 export ICEBERG_CREDENTIAL="your-oauth2-credential"
+export ICEBERG_OAUTH2_SERVER_URI="https://your-rest-catalog-server.com/api/v1/oauth/tokens"
 export S3_ENDPOINT="http://localhost:9000"
 export S3_ACCESS_KEY="minio"
 export S3_SECRET_KEY="minio123"
@@ -27,6 +37,11 @@ export S3_REGION="us-east-1"
 
 Alternatively, copy `examples/pyiceberg.yaml.sample` to `~/.pyiceberg.yaml`, adjust the values,
 and use `load_catalog("my-rest-catalog")` instead of the direct constructor.
+
+> **Polaris persistence caveat:** the bundled Polaris server uses in-memory persistence,
+> so the `datalake` catalog is wiped whenever the Polaris container restarts. The one-shot
+> `polaris-setup` sidecar re-creates it on every `docker compose up`, which is fine for the
+> examples stack but not for durable data.
 
 Trino connection:
 
@@ -93,10 +108,10 @@ Run the local smoke subset:
 bash ../tools/run_examples_smoke.sh
 ```
 
-This smoke suite covers the fast local examples that only depend on the bundled Docker stack.
+This smoke suite covers the fast local examples that only depend on the bundled Docker stack,
+including `rest_catalog_example.py` (backed by the bundled Polaris catalog).
 It intentionally skips:
 
-- `rest_catalog_example.py`: requires a REST Catalog server (Tabular, Polaris, or self-hosted).
 - `load_from_api.py`: depends on an external public API.
 - `load_stream.py`: writes a very large in-memory IPC stream and is too heavy for routine smoke checks.
 
