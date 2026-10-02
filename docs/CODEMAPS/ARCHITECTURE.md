@@ -1,19 +1,19 @@
 # Architecture Map
 
-High-level system architecture, component relationships, and data flow for `iceberg-loader`.
+How `iceberg-loader` moves Arrow data through schema handling and write strategies.
 
 ---
 
 ## System Overview
 
-`iceberg-loader` is a thin Python convenience wrapper around [PyIceberg](https://py.iceberg.apache.org/) for loading PyArrow data into Apache Iceberg tables. The architecture centers on an orchestrator-facade (`IcebergLoader`) that delegates to pluggable write strategies and a schema manager.
+`IcebergLoader` receives PyArrow data, uses `SchemaManager` to prepare the table, and delegates writes to a strategy for the selected mode.
 
-**Key Design Patterns**:
-- **Facade**: `IcebergLoader` exposes a unified interface over complex PyIceberg interactions.
-- **Strategy**: WriteStrategy pattern decouples ingestion mode (`append`, `overwrite`, `upsert`, etc.) from the loader.
-- **Value Object**: `LoaderConfig` (frozen Pydantic) centralizes all operation parameters.
-- **Schema Evolution**: `SchemaManager` handles incremental table schema updates.
-- **Type Conversion**: `convert_table_types` ensures Arrow↔Iceberg type compatibility.
+The main responsibilities are:
+- `IcebergLoader` buffers input and coordinates writes.
+- `WriteStrategy` selects the behavior for append, overwrite, replacement, or upsert.
+- `LoaderConfig` holds validated write options in a frozen Pydantic model.
+- `SchemaManager` creates tables and adds columns when schema evolution is enabled.
+- `convert_table_types` casts Arrow data to the table schema.
 
 ---
 

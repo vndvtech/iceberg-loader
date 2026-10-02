@@ -1,6 +1,6 @@
 # iceberg-loader
 
-A convenience wrapper around [PyIceberg](https://py.iceberg.apache.org/) that simplifies data loading into Apache Iceberg tables. PyArrow-first, handles messy JSON, schema evolution, idempotent replace, upsert, batching, and streaming out of the box.
+`iceberg-loader` wraps [PyIceberg](https://py.iceberg.apache.org/) to load PyArrow data into Apache Iceberg tables. It handles mixed JSON fields, schema evolution, partition replacement, upserts, batches, and IPC streams.
 
 > **Status:** Actively developed and under testing. PRs are welcome!
 > Tested against Hive Metastore and REST Catalog (Tabular, Polaris, self-hosted).
@@ -162,7 +162,7 @@ print(result)
 
 ### Idempotent Load (Replace Partition)
 
-Safely re-load data for a specific day (avoiding duplicates):
+Replace data for a specific day without adding duplicate rows:
 
 ```python
 config = LoaderConfig(
@@ -176,7 +176,7 @@ load_data_to_iceberg(table_data=data, table_identifier=("my_db", "my_table"), ca
 
 ### Upsert (Merge Into)
 
-Merge operation (update existing rows, insert new ones) based on key columns. Requires PyIceberg >= 0.7.1.
+Update matching rows and insert new ones using key columns. Requires PyIceberg >= 0.7.1.
 
 ```python
 config = LoaderConfig(write_mode="upsert", join_cols=["id"])
@@ -263,7 +263,7 @@ expire_snapshots(table, keep_last=2)
 
 ### Adding Load Timestamp
 
-You can automatically add a timestamp column (e.g. `_load_dttm`) to every row to track when it was loaded. This is useful for ETL audit trails or partitioning by load time.
+Set `load_timestamp` to add a timestamp column (by default, `_load_dttm`) to every row. You can use it for audit trails or partitioning by load time.
 
 ```python
 from datetime import datetime
@@ -306,7 +306,7 @@ config_custom = LoaderConfig(
 
 ### `load_batches_to_iceberg()`
 
-Main function for loading a stream of batches into an Iceberg table.
+Loads a stream of batches into an Iceberg table.
 
 ```python
 def load_batches_to_iceberg(
@@ -317,7 +317,7 @@ def load_batches_to_iceberg(
 ) -> dict[str, Any]
 ```
 
-All load parameters (write_mode, partition_col, replace_filter, join_cols, schema_evolution, commit_interval, table_properties) are passed **only** via `LoaderConfig`. See the table in **LoaderConfig Reference** above.
+Pass write options through `LoaderConfig`; the table above lists its fields.
 
 #### Return Value
 
@@ -382,7 +382,7 @@ result = load_batches_to_iceberg(
 
 ## Examples
 
-See the [Examples](examples.md) page for runnable demos covering streaming, upsert, schema evolution, messy JSON, and more.
+See [Examples](examples.md) for scripts covering streaming, upserts, schema evolution, and mixed JSON fields.
 
 ---
 

@@ -1,6 +1,6 @@
 # Examples
 
-Runnable examples demonstrating various features of `iceberg-loader`. All examples are located in the [`examples/`](https://github.com/vndvtech/iceberg-loader/tree/main/examples) directory.
+The scripts in [`examples/`](https://github.com/vndvtech/iceberg-loader/tree/main/examples) cover loading, catalog setup, and maintenance.
 
 ## Prerequisites
 
@@ -133,7 +133,7 @@ load_data_to_iceberg(data, ("db", "users"), catalog, config=config)
 
 ### Dynamic Configuration (Multi-table Load)
 
-When loading multiple tables in a loop, you can dynamically switch `LoaderConfig` for each table:
+Choose a `LoaderConfig` for each table in a loop:
 
 ```python
 # Define configurations
@@ -160,7 +160,7 @@ for endpoint in endpoints:
 
 ### Messy JSON
 
-iceberg-loader auto-serializes mixed/nested types to JSON strings when PyArrow would fail:
+For mixed or nested values that PyArrow cannot convert directly, `iceberg-loader` serializes dicts and lists as JSON strings:
 
 ```python
 from iceberg_loader import LoaderConfig, load_data_to_iceberg
@@ -180,7 +180,7 @@ load_data_to_iceberg(data, ("db", "events"), catalog, config=config)
 
 ### Schema Evolution
 
-Automatically add new columns when data schema changes:
+Set `schema_evolution=True` to add columns found in incoming data:
 
 ```python
 config = LoaderConfig(write_mode="append", schema_evolution=True)

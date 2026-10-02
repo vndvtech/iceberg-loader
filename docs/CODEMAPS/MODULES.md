@@ -1,12 +1,12 @@
 # Module Map
 
-Descriptive catalog of all modules in `iceberg-loader`, their public APIs, and dependencies.
+Modules in `iceberg-loader`, with their exports and dependencies.
 
 ---
 
 ## `iceberg_loader` (Public Package)
 
-**Purpose**: Main public entry-point that re-exports all stable APIs and a module-level logger.
+**Purpose**: Re-exports the public API and module-level logger.
 
 **Location**: `src/iceberg_loader/__init__.py`
 
@@ -41,7 +41,7 @@ from iceberg_loader import IcebergLoader, LoaderConfig, load_data_to_iceberg
 
 ## `iceberg_loader.catalog` (Catalog Helpers)
 
-**Purpose**: Convenience factory for creating a PyIceberg `RestCatalog` from explicit arguments or environment variables.
+**Purpose**: Creates a PyIceberg `RestCatalog` from arguments or environment variables.
 
 **Location**: `src/iceberg_loader/catalog.py`
 
@@ -61,7 +61,7 @@ from iceberg_loader import IcebergLoader, LoaderConfig, load_data_to_iceberg
 
 ## `iceberg_loader.core` (Core Layer)
 
-**Purpose**: All internal orchestration, write strategies, schema management, config, and partitioning.
+**Purpose**: Coordinates loading, writes, schema changes, configuration, and partitioning.
 
 **Location**: `src/iceberg_loader/core/`
 
@@ -207,7 +207,7 @@ from iceberg_loader import IcebergLoader, LoaderConfig, load_data_to_iceberg
 
 ## `iceberg_loader.services` (Services)
 
-**Purpose**: Cross-cutting concerns — logging and maintenance utilities.
+**Purpose**: Logging and snapshot maintenance.
 
 **Location**: `src/iceberg_loader/services/`
 

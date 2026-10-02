@@ -1,6 +1,6 @@
 # File Map
 
-Directory structure, file purposes, and key navigation notes for `iceberg-loader`.
+Where to find source files, tests, examples, and project configuration.
 
 ---
 
@@ -139,7 +139,7 @@ iceberg-loader/
 
 ---
 
-## Navigation Quick-Reference
+## Where to make changes
 
 | Task | Go To |
 |------|-------|
