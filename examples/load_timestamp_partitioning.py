@@ -1,7 +1,7 @@
 """
 Demonstrates safe partitioning by load timestamp and what happens with an invalid identity partition.
 
-Prereqs: run the local stack from examples/ (docker-compose up -d), then execute:
+Prereqs: run the local stack from examples/ (docker compose up -d), then execute:
     uv run python load_timestamp_partitioning.py
 """
 

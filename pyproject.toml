@@ -40,6 +40,9 @@ hive = [
 s3 = [
   "pyiceberg[s3fs]>=0.7.1",
 ]
+rest = [
+  "pyiceberg[pyiceberg-core,s3fs]>=0.7.1",
+]
 all = [
   "pyiceberg[hive,s3fs,pyiceberg-core]>=0.7.1",
 ]

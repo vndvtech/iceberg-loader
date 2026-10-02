@@ -1,0 +1,41 @@
+# Sample pyiceberg.yaml configuration for REST Catalog
+#
+# Copy this file to ~/.pyiceberg.yaml and adjust the values.
+# Then load the catalog with:
+#   from pyiceberg.catalog import load_catalog
+#   catalog = load_catalog("my-rest-catalog")
+#
+# For more details see: https://py.iceberg.apache.org/configuration/
+
+catalog:
+  my-rest-catalog:
+    # Catalog type — use "rest" for any Iceberg REST Catalog server
+    # (Tabular, Apache Polaris, self-hosted, etc.)
+    type: rest
+
+    # REST Catalog server endpoint
+    uri: https://api.tabular.io/ws
+
+    # Warehouse location (S3 bucket path)
+    warehouse: s3://my-bucket/warehouse/
+
+    # OAuth2 credential (from your catalog provider)
+    credential: your-oauth2-credential-here
+
+    # S3 filesystem properties for direct data access
+    s3.endpoint: https://s3.amazonaws.com
+    s3.region: us-east-1
+    # s3.access-key-id: AKIAIOSFODNN7EXAMPLE
+    # s3.secret-access-key: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+
+  # Example: local MinIO with a self-hosted REST catalog (e.g. Apache Polaris)
+  local-polaris:
+    type: rest
+    uri: http://localhost:8181/api/catalog
+    warehouse: s3://datalake/warehouse/
+    credential: root:root
+    s3.endpoint: http://localhost:9000
+    s3.access-key-id: minio
+    s3.secret-access-key: minio123
+    s3.path-style-access: "true"
+    s3.region: us-east-1

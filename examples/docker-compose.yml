@@ -50,24 +50,38 @@ services:
 
   minio:
     hostname: minio
-    image: 'minio/minio:RELEASE.2022-05-26T05-48-41Z'
+    # MinIO moved to a source-only distribution in Oct 2025 and removed its official
+    # Docker Hub / Quay images. coollabsio/minio rebuilds the official release from
+    # source and is actively maintained (daily builds).
+    image: 'coollabsio/minio:RELEASE.2025-10-15T17-29-55Z'
     container_name: minio
     ports:
       - '9000:9000'
       - '9001:9001'
     environment:
-      MINIO_ACCESS_KEY: minio
-      MINIO_SECRET_KEY: minio123
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
     command: server /data --console-address ":9001"
 
-  # This job will create the "datalake" bucket on Minio
+  # This job creates the "datalake" bucket on MinIO.
+  # It reuses the MinIO image, which bundles the official, signature-verified `mc` client.
   mc-job:
-    image: 'minio/mc:RELEASE.2022-05-09T04-08-26Z'
-    entrypoint: |
-      /bin/bash -c "
-      sleep 5;
-      /usr/bin/mc config --quiet host add myminio http://minio:9000 minio minio123;
-      /usr/bin/mc mb --quiet myminio/datalake
-      "
+    image: 'coollabsio/minio:RELEASE.2025-10-15T17-29-55Z'
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        attempts=0
+        until mc alias set myminio http://minio:9000 minio minio123 >/dev/null 2>&1; do
+          attempts=$$((attempts + 1))
+          if [ "$$attempts" -ge 30 ]; then
+            echo "MinIO did not become ready in time" >&2
+            exit 1
+          fi
+          echo "Waiting for MinIO to be ready..."
+          sleep 2
+        done
+        mc mb --ignore-existing myminio/datalake
+        echo "Bucket datalake is ready."
     depends_on:
       - minio

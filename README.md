@@ -13,7 +13,7 @@ A convenience wrapper around [PyIceberg](https://py.iceberg.apache.org/) that si
 
 
 > **Status:** Actively developed and under testing. PRs are welcome!
-> Currently tested against Hive Metastore; REST Catalog support is planned.
+> Tested against Hive Metastore and REST Catalog (Tabular, Polaris, self-hosted).
 
 ## Why iceberg-loader?
 
@@ -37,7 +37,10 @@ uv add "iceberg-loader[all]"
 
 ## Quickstart
 
+### Hive Metastore
+
 ```python
+from pyiceberg.catalog import load_catalog
 from iceberg_loader import LoaderConfig, load_data_to_iceberg
 from iceberg_loader.utils.arrow import create_arrow_table_from_data
 
@@ -54,6 +57,51 @@ arrow_table = create_arrow_table_from_data(data)
 
 config = LoaderConfig(write_mode="append", partition_col="day(signup_date)", schema_evolution=True)
 load_data_to_iceberg(arrow_table, table_id, catalog, config=config)
+```
+
+### REST Catalog
+
+```python
+from iceberg_loader import LoaderConfig, get_rest_catalog, load_data_to_iceberg
+from iceberg_loader.utils.arrow import create_arrow_table_from_data
+
+catalog = get_rest_catalog(
+    uri="https://api.tabular.io/ws",
+    warehouse="s3://my-bucket/warehouse/",
+    credential="your-oauth2-credential",
+)
+table_id = ("default", "my_table")
+
+data = [
+    {"id": 1, "name": "Alice", "signup_date": "2023-01-01"},
+    {"id": 2, "name": "Bob", "signup_date": "2023-01-02"},
+]
+
+arrow_table = create_arrow_table_from_data(data)
+
+config = LoaderConfig(write_mode="append", partition_col="day(signup_date)", schema_evolution=True)
+load_data_to_iceberg(arrow_table, table_id, catalog, config=config)
+```
+
+Or use `pyiceberg.yaml` to configure your REST catalog and load it by name:
+
+```yaml
+# ~/.pyiceberg.yaml (see examples/pyiceberg.yaml.sample for a full annotated example)
+catalog:
+  my-rest-catalog:
+    type: rest
+    uri: https://your-catalog-server.com/api
+    warehouse: s3://my-bucket/warehouse/
+    credential: your-oauth2-credential
+    s3.endpoint: https://s3.amazonaws.com
+    s3.region: us-east-1
+```
+
+```python
+from pyiceberg.catalog import load_catalog
+
+catalog = load_catalog("my-rest-catalog")
+# ... rest is identical to above
 ```
 
 ## Which function to use?

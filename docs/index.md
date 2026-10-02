@@ -3,7 +3,7 @@
 A convenience wrapper around [PyIceberg](https://py.iceberg.apache.org/) that simplifies data loading into Apache Iceberg tables. PyArrow-first, handles messy JSON, schema evolution, idempotent replace, upsert, batching, and streaming out of the box.
 
 > **Status:** Actively developed and under testing. PRs are welcome!
-> Currently tested against Hive Metastore; REST Catalog support is planned.
+> Tested against Hive Metastore and REST Catalog (Tabular, Polaris, self-hosted).
 
 ## Features
 
@@ -31,8 +31,8 @@ uv pip install "iceberg-loader[all]"
 | Extra | Description |
 |-------|-------------|
 | `hive` | Hive Metastore support |
-| `s3fs` | S3 filesystem support |
-| `pyiceberg-core` | PyIceberg core |
+| `s3` | S3 filesystem support |
+| `rest` | REST Catalog support (Tabular, Polaris, self-hosted) |
 | `all` | All extras |
 
 ## Compatibility
@@ -60,6 +60,77 @@ load_data_to_iceberg(data, ("db", "users"), catalog, config=config)
 ---
 
 ## Usage
+
+### REST Catalog Setup
+
+You can use REST Catalog via the built-in `get_rest_catalog()` helper, the `RestCatalog` constructor directly, or through a `~/.pyiceberg.yaml` configuration file.
+
+**Option A: get_rest_catalog() helper (recommended)**
+
+```python
+from iceberg_loader import get_rest_catalog
+
+catalog = get_rest_catalog(
+    uri="https://api.tabular.io/ws",
+    warehouse="s3://my-bucket/warehouse/",
+    credential="your-oauth2-credential",
+    s3_endpoint="https://s3.amazonaws.com",
+    s3_region="us-east-1",
+)
+```
+
+The helper also reads from environment variables — see `help(get_rest_catalog)` for all options.
+
+**Option B: Direct constructor**
+
+```python
+import os
+from pyiceberg.catalog.rest import RestCatalog
+
+# Only include S3 properties that are actually set, so unset env vars
+# don't pass None into RestCatalog.
+s3_properties = {
+    key: value
+    for key, value in {
+        "s3.endpoint": os.environ.get("S3_ENDPOINT"),
+        "s3.access-key-id": os.environ.get("S3_ACCESS_KEY"),
+        "s3.secret-access-key": os.environ.get("S3_SECRET_KEY"),
+        "s3.region": os.environ.get("S3_REGION"),
+    }.items()
+    if value is not None
+}
+
+catalog = RestCatalog(
+    name="my-rest-catalog",
+    uri=os.environ["ICEBERG_REST_URI"],          # e.g. https://api.tabular.io/ws
+    warehouse=os.environ["ICEBERG_WAREHOUSE"],   # e.g. s3://my-bucket/warehouse/
+    credential=os.environ["ICEBERG_CREDENTIAL"], # OAuth2 credential
+    **s3_properties,
+)
+```
+
+> Prefer `get_rest_catalog()` (Option A) — it handles env-var resolution and
+> omits unset properties for you.
+
+**Option C: pyiceberg.yaml + load_catalog()**
+
+```yaml
+# ~/.pyiceberg.yaml (see examples/pyiceberg.yaml.sample for a full annotated example)
+catalog:
+  my-rest-catalog:
+    type: rest
+    uri: https://api.tabular.io/ws
+    warehouse: s3://my-bucket/warehouse/
+    credential: your-oauth2-credential
+    s3.endpoint: https://s3.amazonaws.com
+    s3.region: us-east-1
+```
+
+```python
+from pyiceberg.catalog import load_catalog
+
+catalog = load_catalog("my-rest-catalog")
+```
 
 ### Basic Example
 

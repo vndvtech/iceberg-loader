@@ -73,7 +73,7 @@ Examples require a local Iceberg environment with Docker:
 
 ```bash
 cd examples
-docker-compose up -d
+docker compose up -d
 cd ..
 
 # Run individual examples

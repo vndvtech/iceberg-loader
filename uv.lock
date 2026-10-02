@@ -749,6 +749,9 @@ dev = [
 hive = [
     { name = "pyiceberg", extra = ["hive"] },
 ]
+rest = [
+    { name = "pyiceberg", extra = ["pyiceberg-core", "s3fs"] },
+]
 s3 = [
     { name = "pyiceberg", extra = ["s3fs"] },
 ]
@@ -779,6 +782,7 @@ requires-dist = [
     { name = "pyiceberg", specifier = ">=0.7.1" },
     { name = "pyiceberg", extras = ["hive"], marker = "extra == 'hive'", specifier = ">=0.7.1" },
     { name = "pyiceberg", extras = ["hive", "s3fs", "pyiceberg-core"], marker = "extra == 'all'", specifier = ">=0.7.1" },
+    { name = "pyiceberg", extras = ["pyiceberg-core", "s3fs"], marker = "extra == 'rest'", specifier = ">=0.7.1" },
     { name = "pyiceberg", extras = ["s3fs"], marker = "extra == 's3'", specifier = ">=0.7.1" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=7.0" },
@@ -789,7 +793,7 @@ requires-dist = [
     { name = "twine", marker = "extra == 'dev'", specifier = ">=5.0.0" },
     { name = "ty", marker = "extra == 'dev'", specifier = ">=0.0.1" },
 ]
-provides-extras = ["hive", "s3", "all", "test", "dev"]
+provides-extras = ["hive", "s3", "rest", "all", "test", "dev"]
 
 [package.metadata.requires-dev]
 dev = [
