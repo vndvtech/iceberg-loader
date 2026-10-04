@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/vndvtech/iceberg-loader/main/logo.png" alt="iceberg-loader" width="600">
+</p>
+
 # iceberg-loader
 
 [![PyPI - Version](https://img.shields.io/pypi/v/iceberg-loader.svg)](https://pypi.org/project/iceberg-loader)
