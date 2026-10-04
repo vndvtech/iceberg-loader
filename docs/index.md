@@ -14,6 +14,10 @@
 - **Commit interval** for long streams.
 - **Maintenance helpers** (expire snapshots).
 
+## Benchmark
+
+[iceberg-loader-benchmark](https://github.com/vndv/iceberg-loader-benchmark) compares iceberg-loader with the [dlt](https://github.com/dlt-hub/dlt) Iceberg destination. Both write the same Arrow data through a Polaris REST Catalog and MinIO. On a 1 GiB NYC 311 snapshot (1.72M rows), iceberg-loader had a median write time of 3.7 s and a median peak RSS of 1.36 GiB; dlt took 11.4 s and 2.26 GiB. The repo covers the methodology, raw data, and how to reproduce the run.
+
 ## Install
 
 ```bash
