@@ -30,6 +30,7 @@ classifiers = [
 ]
 dependencies = [
   "pyarrow>=18.0.0",
+  "pydantic>=2.0,<3.0",
   "pyiceberg>=0.7.1",
 ]
 

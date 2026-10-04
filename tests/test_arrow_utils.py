@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 import pyarrow as pa
 import pytest
 
@@ -65,6 +67,29 @@ def test_convert_column_type_warns_and_nulls(caplog: pytest.LogCaptureFixture) -
     with caplog.at_level('WARNING', logger='iceberg_loader'):
         converted = convert_column_type(column, pa.int64(), 'bad')
     assert converted.to_pylist() == [None, None]
+
+
+def test_convert_column_type_warns_on_timestamp_truncation(loader_warnings: Callable[[], list[str]]) -> None:
+    column = pa.array([1_700_000_000_123_456_789], type=pa.timestamp('ns'))
+    converted = convert_column_type(column, pa.timestamp('us'), 'ts')
+    assert converted.cast(pa.int64()).to_pylist() == [1_700_000_000_123_456]
+    assert loader_warnings() == [
+        'Timestamp precision lost for column ts (timestamp[ns] -> timestamp[us]). Values were truncated.',
+    ]
+
+
+def test_convert_column_type_exact_timestamp_does_not_warn(loader_warnings: Callable[[], list[str]]) -> None:
+    column = pa.array([1_700_000_000_123_456_000], type=pa.timestamp('ns'))
+    convert_column_type(column, pa.timestamp('us'), 'ts')
+    assert loader_warnings() == []
+
+
+def test_convert_column_type_widening_overflow_is_not_called_truncation(
+    loader_warnings: Callable[[], list[str]],
+) -> None:
+    year_3000_us = 32_503_680_000_000_000
+    convert_column_type(pa.array([year_3000_us], type=pa.timestamp('us')), pa.timestamp('ns'), 'ts')
+    assert not any('Timestamp precision lost' in m for m in loader_warnings())
 
 
 def test_convert_table_types_missing_column() -> None:

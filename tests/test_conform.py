@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
@@ -105,3 +106,57 @@ def test_empty_buffer_is_rejected(sql_catalog: SqlCatalog) -> None:
 
     with pytest.raises(ValueError, match='at least one batch'):
         conformer.conform([])
+
+
+def test_explicit_format_version_mismatch_warns(
+    sql_catalog: SqlCatalog,
+    loader_warnings: Callable[[], list[str]],
+) -> None:
+    v1 = LoaderConfig(write_mode='append', table_properties={'format-version': 1})
+    load_data_to_iceberg(pa.table({'id': [1]}), TID, sql_catalog, v1)
+
+    v2 = LoaderConfig(write_mode='append', table_properties={'format-version': 2})
+    load_data_to_iceberg(pa.table({'id': [2]}), TID, sql_catalog, v2)
+
+    assert sql_catalog.load_table(TID).format_version == 1
+    assert loader_warnings() == [
+        'Table default.events has format-version 1, but table_properties request 2. '
+        'format-version applies only when a table is created; the table keeps version 1.',
+    ]
+
+
+def test_default_format_version_does_not_warn_for_existing_table(
+    sql_catalog: SqlCatalog,
+    loader_warnings: Callable[[], list[str]],
+) -> None:
+    v1 = LoaderConfig(write_mode='append', table_properties={'format-version': 1})
+    load_data_to_iceberg(pa.table({'id': [1]}), TID, sql_catalog, v1)
+
+    load_data_to_iceberg(pa.table({'id': [2]}), TID, sql_catalog, LoaderConfig(write_mode='append'))
+
+    assert loader_warnings() == []
+
+
+def test_matching_format_version_does_not_warn(
+    sql_catalog: SqlCatalog,
+    loader_warnings: Callable[[], list[str]],
+) -> None:
+    v2 = LoaderConfig(write_mode='append', table_properties={'format-version': '2'})
+    load_data_to_iceberg(pa.table({'id': [1]}), TID, sql_catalog, LoaderConfig(write_mode='append'))
+
+    load_data_to_iceberg(pa.table({'id': [2]}), TID, sql_catalog, v2)
+
+    assert loader_warnings() == []
+
+
+def test_non_integer_format_version_for_existing_table_warns_and_loads(
+    sql_catalog: SqlCatalog,
+    loader_warnings: Callable[[], list[str]],
+) -> None:
+    load_data_to_iceberg(pa.table({'id': [1]}), TID, sql_catalog, LoaderConfig(write_mode='append'))
+    bad = LoaderConfig(write_mode='append', table_properties={'format-version': 'v2'})
+
+    load_data_to_iceberg(pa.table({'id': [2]}), TID, sql_catalog, bad)
+
+    assert sql_catalog.load_table(TID).scan().to_arrow().num_rows == 2
+    assert loader_warnings() == ["Ignoring non-integer format-version 'v2' for existing table."]

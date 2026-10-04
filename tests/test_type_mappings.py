@@ -1,4 +1,5 @@
 import pyarrow as pa
+import pyiceberg.types
 import pytest
 from pyiceberg.types import DecimalType, IntegerType, LongType, StringType, TimestampType, TimestamptzType
 
@@ -26,6 +27,14 @@ def test_iceberg_to_arrow_basic() -> None:
     assert get_iceberg_type(pa.int32()) == IntegerType()
     assert get_arrow_type(IntegerType()) == pa.int32()
     assert get_arrow_type(LongType()) == pa.int64()
+
+
+@pytest.mark.skipif(not hasattr(pyiceberg.types, 'UnknownType'), reason='format v3 types need pyiceberg >= 0.10')
+def test_iceberg_v3_types_to_arrow() -> None:
+    v3 = pyiceberg.types
+    assert get_arrow_type(v3.TimestampNanoType()) == pa.timestamp('ns')
+    assert get_arrow_type(v3.TimestamptzNanoType()) == pa.timestamp('ns', tz='UTC')
+    assert get_arrow_type(v3.UnknownType()) == pa.null()
 
 
 def test_custom_mapping() -> None:

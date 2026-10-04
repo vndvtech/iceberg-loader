@@ -1,7 +1,11 @@
+import logging
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
 from pyiceberg.catalog.sql import SqlCatalog
+
+from iceberg_loader.services.logging import get_logger
 
 
 @pytest.fixture()
@@ -14,3 +18,14 @@ def sql_catalog(tmp_path: Path) -> SqlCatalog:
     )
     catalog.create_namespace('default')
     return catalog
+
+
+@pytest.fixture()
+def loader_warnings(caplog: pytest.LogCaptureFixture) -> Iterator[Callable[[], list[str]]]:
+    """Returns WARNING+ messages from the iceberg_loader logger, which does not propagate to root."""
+    loader_logger = get_logger()
+    loader_logger.addHandler(caplog.handler)
+    try:
+        yield lambda: [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
+    finally:
+        loader_logger.removeHandler(caplog.handler)

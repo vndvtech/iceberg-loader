@@ -83,9 +83,18 @@ def convert_column_type(column: pa.Array, target_type: pa.DataType, column_name:
         pass
 
     try:
-        return pc.cast(column, target_type, safe=False)
+        result = pc.cast(column, target_type, safe=False)
     except (ValueError, TypeError, pa.ArrowInvalid):
         pass
+    else:
+        if _is_coarser_timestamp(target_type, column.type):
+            logger.warning(
+                'Timestamp precision lost for column %s (%s -> %s). Values were truncated.',
+                column_name or '<unknown>',
+                column.type,
+                target_type,
+            )
+        return result
 
     if (pa.types.is_string(column.type) or pa.types.is_large_string(column.type)) and (
         pa.types.is_timestamp(target_type) or pa.types.is_date(target_type)
@@ -100,6 +109,15 @@ def convert_column_type(column: pa.Array, target_type: pa.DataType, column_name:
         target_type,
     )
     return pa.nulls(len(column), type=target_type, memory_pool=_get_memory_pool())
+
+
+_TIMESTAMP_UNITS = ('s', 'ms', 'us', 'ns')
+
+
+def _is_coarser_timestamp(target_type: pa.DataType, source_type: pa.DataType) -> bool:
+    if not (pa.types.is_timestamp(target_type) and pa.types.is_timestamp(source_type)):
+        return False
+    return _TIMESTAMP_UNITS.index(target_type.unit) < _TIMESTAMP_UNITS.index(source_type.unit)
 
 
 def convert_table_types(table: pa.Table, target_schema: pa.Schema) -> pa.Table:

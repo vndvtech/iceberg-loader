@@ -256,6 +256,14 @@ config = LoaderConfig(
 load_data_to_iceberg(table_data, ("default", "events"), catalog, config=config)
 ```
 
+Because this copies `format-version` into your own `table_properties`, it counts as set explicitly: loading into an existing table of another version logs a warning (see below).
+
+### Timestamp precision and format version
+
+- Iceberg format v1/v2 stores timestamps in microseconds. Nanosecond input (`pa.timestamp('ns')`) is truncated to microseconds; when values actually lose precision, the loader logs a warning naming the column.
+- `format-version` in `table_properties` applies only when the loader creates a table. Loading into an existing table never changes its version; if you set `format-version` explicitly and it differs from the table's version, the loader logs a warning. The library default (`format-version: 2`) does not trigger it.
+- PyIceberg cannot write format v3 tables yet, so loading into a v3 table fails inside PyIceberg.
+
 ### Maintenance Helper
 
 ```python
@@ -300,7 +308,7 @@ config_custom = LoaderConfig(
 | `schema_evolution` | `bool` | `False` | Auto-add new columns |
 | `commit_interval` | `int` | `0` | Commit every N batches (0 = single transaction) |
 | `join_cols` | `list[str] \| None` | `None` | Merge keys for upsert |
-| `table_properties` | `dict \| None` | `None` | Custom Iceberg table properties |
+| `table_properties` | `dict \| None` | `None` | Custom Iceberg table properties; `format-version` applies only to new tables |
 | `load_timestamp` | `datetime \| None` | `None` | If set, adds `_load_dttm` column with this value |
 | `load_ts_col` | `str` | `'_load_dttm'` | Name of the load timestamp column |
 

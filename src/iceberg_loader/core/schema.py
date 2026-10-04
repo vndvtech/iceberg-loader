@@ -35,10 +35,15 @@ class SchemaManager:
         arrow_schema: pa.Schema,
         partition_col: str | None = None,
         table_properties: dict[str, Any] | None = None,
+        requested_format_version: Any = None,
     ) -> Any:
-        """Loads the table, or creates it if it doesn't exist."""
+        """
+        Loads the table, or creates it if it doesn't exist.
+        requested_format_version is the format-version the user set explicitly (not the library default);
+        an existing table with a different version is kept as is, with a warning.
+        """
         try:
-            return self.catalog.load_table(table_identifier)
+            table = self.catalog.load_table(table_identifier)
         except (FileNotFoundError, ValueError, NoSuchTableError):
             logger.info('Table %s not found, creating new table.', table_identifier)
 
@@ -48,6 +53,9 @@ class SchemaManager:
             iceberg_schema = self._arrow_to_iceberg(adjusted_arrow_schema)
             self._create_table(table_identifier, iceberg_schema, partition_col, table_properties)
             return self.catalog.load_table(table_identifier)
+
+        _warn_on_format_version_mismatch(table, requested_format_version)
+        return table
 
     def evolve_schema_if_needed(self, table: Any, batch_schema: pa.Schema) -> bool:
         """
@@ -257,3 +265,22 @@ class SchemaManager:
             arrow_type = get_arrow_type(field.field_type)
             fields.append(pa.field(field.name, arrow_type, nullable=not field.required))
         return pa.schema(fields)
+
+
+def _warn_on_format_version_mismatch(table: Any, requested: Any) -> None:
+    if requested is None:
+        return
+    try:
+        if int(requested) == table.format_version:
+            return
+    except (TypeError, ValueError):
+        logger.warning('Ignoring non-integer format-version %r for existing table.', requested)
+        return
+    logger.warning(
+        'Table %s has format-version %s, but table_properties request %s. '
+        'format-version applies only when a table is created; the table keeps version %s.',
+        '.'.join(table.name()),
+        table.format_version,
+        requested,
+        table.format_version,
+    )

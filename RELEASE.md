@@ -1,3 +1,19 @@
+# Unreleased
+
+## Highlights
+- **New warning**: Casting a timestamp column to a coarser unit (e.g. `pa.timestamp('ns')` → microseconds) logs a warning when values lose precision. Previously the truncation was silent; the stored data is unchanged.
+- **New warning**: When `format-version` is set explicitly (in `IcebergLoader(table_properties=...)` or `LoaderConfig.table_properties`) and an existing table has a different version, the loader logs a warning. The table keeps its version. A non-integer `format-version` for an existing table is ignored with a warning.
+- **Types**: Iceberg format v3 types `timestamp_ns`, `timestamptz_ns` and `unknown` now map to Arrow `timestamp('ns')`, `timestamp('ns', tz='UTC')` and `null` (requires PyIceberg >= 0.10). PyIceberg still cannot write v3 tables.
+- **Dependencies**: `pydantic>=2.0,<3.0` is now a declared dependency (it was already required through PyIceberg).
+- `BatchConformer` and `SchemaManager.ensure_table_exists` accept an optional `requested_format_version` argument.
+
+## Breaking Changes
+- None. The changes add log warnings only; written data and raised errors are unchanged.
+
+## Test Plan
+- `uv run pytest -v`
+- `uv run ruff check . && uv run ruff format --check . && uv run ty check`
+
 # Release 0.1.4 — 2026-10-02
 
 ## Highlights
