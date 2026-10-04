@@ -129,7 +129,7 @@ from iceberg_loader import IcebergLoader, LoaderConfig, load_data_to_iceberg
 
 **Exports**:
 - `SchemaManager(catalog, table_properties)`
-  - `.ensure_table_exists(identifier, arrow_schema, partition_col, table_properties, requested_format_version=None)` — warns when an existing table's format version differs from the one the user set explicitly
+  - `.ensure_table_exists(identifier, arrow_schema, partition_col, table_properties, requested_format_version=None)` — warns when an existing table's format version differs from the one the user set explicitly; raises `NotImplementedError` for format versions PyIceberg cannot write
   - `.evolve_schema_if_needed(table, batch_schema)` — adds new columns
   - `.get_arrow_schema(table)` — returns `pa.Schema`
 

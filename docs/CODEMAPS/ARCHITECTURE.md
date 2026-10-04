@@ -89,7 +89,7 @@ then IcebergLoader: strategy.write(conformer.table, data, is_first_write)
 
 ### `SchemaManager`
 **Role**: Table lifecycle + schema evolution.
-- `ensure_table_exists()` — load or create table with partition spec; for an existing table, warns if `format-version` set explicitly by the user differs from the table's version (the table is not upgraded)
+- `ensure_table_exists()` — load or create table with partition spec; for an existing table, warns if `format-version` set explicitly by the user differs from the table's version (the table is not upgraded); raises `NotImplementedError` if the new or existing table's format version is newer than PyIceberg can write
 - `evolve_schema_if_needed()` — add missing top-level columns
 - `_arrow_to_iceberg()` / `_iceberg_to_arrow()` — bidirectional schema conversion
 

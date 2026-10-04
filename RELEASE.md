@@ -3,12 +3,13 @@
 ## Highlights
 - **New warning**: Casting a timestamp column to a coarser unit (e.g. `pa.timestamp('ns')` → microseconds) logs a warning when values lose precision. Previously the truncation was silent; the stored data is unchanged.
 - **New warning**: When `format-version` is set explicitly (in `IcebergLoader(table_properties=...)` or `LoaderConfig.table_properties`) and an existing table has a different version, the loader logs a warning. The table keeps its version. A non-integer `format-version` for an existing table is ignored with a warning.
+- **Fail fast on format v3**: If the new or existing table's format version is newer than the installed PyIceberg can write (currently 2), the loader raises `NotImplementedError` with a clear message before creating the table or writing data.
 - **Types**: Iceberg format v3 types `timestamp_ns`, `timestamptz_ns` and `unknown` now map to Arrow `timestamp('ns')`, `timestamp('ns', tz='UTC')` and `null` (requires PyIceberg >= 0.10). PyIceberg still cannot write v3 tables.
 - **Dependencies**: `pydantic>=2.0,<3.0` is now a declared dependency (it was already required through PyIceberg).
 - `BatchConformer` and `SchemaManager.ensure_table_exists` accept an optional `requested_format_version` argument.
 
 ## Breaking Changes
-- None. The changes add log warnings only; written data and raised errors are unchanged.
+- Loading into an existing format v3 table now raises `NotImplementedError` from iceberg-loader instead of `ValueError: Cannot write manifest for table version: 3` from PyIceberg. The load failed before as well; only the exception type and message changed.
 
 ## Test Plan
 - `uv run pytest -v`
