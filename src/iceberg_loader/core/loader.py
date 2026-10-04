@@ -26,6 +26,7 @@ class IcebergLoader:
         self.table_properties = TABLE_PROPERTIES.copy()
         if table_properties:
             self.table_properties.update(table_properties)
+        self._user_table_properties = dict(table_properties or {})
 
         self.schema_manager = SchemaManager(self.catalog, self.table_properties)
         self.default_config = ensure_loader_config(default_config)
@@ -78,8 +79,10 @@ class IcebergLoader:
         """
         effective_config = self._resolve_config(config)
         effective_table_properties = self.table_properties.copy()
+        user_table_properties = self._user_table_properties.copy()
         if effective_config.table_properties:
             effective_table_properties.update(effective_config.table_properties)
+            user_table_properties.update(effective_config.table_properties)
 
         strategy = get_write_strategy(
             effective_config.write_mode,
@@ -91,6 +94,7 @@ class IcebergLoader:
             table_identifier,
             effective_config,
             effective_table_properties,
+            requested_format_version=user_table_properties.get('format-version'),
         )
 
         batches_processed = 0

@@ -15,6 +15,18 @@ from pyiceberg.types import (
 )
 
 
+def _v3_iceberg_to_arrow() -> dict[type[IcebergType], pa.DataType]:
+    try:
+        from pyiceberg.types import TimestampNanoType, TimestamptzNanoType, UnknownType
+    except ImportError:  # pyiceberg < 0.10 has no format v3 types
+        return {}
+    return {
+        TimestampNanoType: pa.timestamp('ns'),
+        TimestamptzNanoType: pa.timestamp('ns', tz='UTC'),
+        UnknownType: pa.null(),
+    }
+
+
 class TypeRegistry:
     def __init__(self) -> None:
         self._arrow_to_iceberg = self._build_arrow_to_iceberg()
@@ -51,6 +63,7 @@ class TypeRegistry:
             DateType: pa.date32(),
             TimestampType: pa.timestamp('us'),
             TimestamptzType: pa.timestamp('us', tz='UTC'),
+            **_v3_iceberg_to_arrow(),
         }
 
     def register_custom_mapping(self, arrow_type: pa.DataType, iceberg_type: IcebergType) -> None:

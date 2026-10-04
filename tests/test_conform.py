@@ -1,4 +1,7 @@
+import json
+from collections.abc import Callable
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import pyarrow as pa
@@ -105,3 +108,117 @@ def test_empty_buffer_is_rejected(sql_catalog: SqlCatalog) -> None:
 
     with pytest.raises(ValueError, match='at least one batch'):
         conformer.conform([])
+
+
+def test_explicit_format_version_mismatch_warns(
+    sql_catalog: SqlCatalog,
+    loader_warnings: Callable[[], list[str]],
+) -> None:
+    v1 = LoaderConfig(write_mode='append', table_properties={'format-version': 1})
+    load_data_to_iceberg(pa.table({'id': [1]}), TID, sql_catalog, v1)
+
+    v2 = LoaderConfig(write_mode='append', table_properties={'format-version': 2})
+    load_data_to_iceberg(pa.table({'id': [2]}), TID, sql_catalog, v2)
+
+    assert sql_catalog.load_table(TID).format_version == 1
+    assert loader_warnings() == [
+        'Table default.events has format-version 1, but table_properties request 2. '
+        'format-version applies only when a table is created; the table keeps version 1.',
+    ]
+
+
+def test_default_format_version_does_not_warn_for_existing_table(
+    sql_catalog: SqlCatalog,
+    loader_warnings: Callable[[], list[str]],
+) -> None:
+    v1 = LoaderConfig(write_mode='append', table_properties={'format-version': 1})
+    load_data_to_iceberg(pa.table({'id': [1]}), TID, sql_catalog, v1)
+
+    load_data_to_iceberg(pa.table({'id': [2]}), TID, sql_catalog, LoaderConfig(write_mode='append'))
+
+    assert loader_warnings() == []
+
+
+def test_matching_format_version_does_not_warn(
+    sql_catalog: SqlCatalog,
+    loader_warnings: Callable[[], list[str]],
+) -> None:
+    v2 = LoaderConfig(write_mode='append', table_properties={'format-version': '2'})
+    load_data_to_iceberg(pa.table({'id': [1]}), TID, sql_catalog, LoaderConfig(write_mode='append'))
+
+    load_data_to_iceberg(pa.table({'id': [2]}), TID, sql_catalog, v2)
+
+    assert loader_warnings() == []
+
+
+@pytest.mark.parametrize('bad_version', ['v2', 2.9, True])
+def test_non_integer_format_version_for_existing_table_warns_and_loads(
+    sql_catalog: SqlCatalog,
+    loader_warnings: Callable[[], list[str]],
+    bad_version: Any,
+) -> None:
+    load_data_to_iceberg(pa.table({'id': [1]}), TID, sql_catalog, LoaderConfig(write_mode='append'))
+    bad = LoaderConfig(write_mode='append', table_properties={'format-version': bad_version})
+
+    load_data_to_iceberg(pa.table({'id': [2]}), TID, sql_catalog, bad)
+
+    assert sql_catalog.load_table(TID).scan().to_arrow().num_rows == 2
+    assert loader_warnings() == [f'Ignoring non-integer format-version {bad_version!r} for existing table.']
+
+
+@pytest.mark.parametrize('version', [3, '3'])
+def test_new_table_with_unwritable_format_version_fails_fast(sql_catalog: SqlCatalog, version: Any) -> None:
+    v3 = LoaderConfig(write_mode='append', table_properties={'format-version': version})
+
+    with pytest.raises(NotImplementedError, match='uses Iceberg format-version 3, but the installed PyIceberg'):
+        load_data_to_iceberg(pa.table({'id': [1]}), TID, sql_catalog, v3)
+
+    assert not sql_catalog.table_exists(TID)
+
+
+def register_v3_table(catalog: SqlCatalog) -> None:
+    """Registers a v3 table as another engine would leave it; PyIceberg cannot create one itself."""
+    seed = catalog.create_table(('default', 'v2_seed'), schema=pa.schema([pa.field('id', pa.int64())]))
+    metadata_path = Path(seed.metadata_location.removeprefix('file://'))
+    metadata = json.loads(metadata_path.read_text())
+    metadata['format-version'] = 3
+    metadata['next-row-id'] = 0
+    v3_path = metadata_path.with_name('00000-v3.metadata.json')
+    v3_path.write_text(json.dumps(metadata))
+    catalog.drop_table(('default', 'v2_seed'))
+    catalog.register_table(TID, f'file://{v3_path}')
+
+
+@pytest.mark.parametrize(
+    'config',
+    [
+        LoaderConfig(write_mode='append'),
+        LoaderConfig(write_mode='overwrite'),
+        LoaderConfig(write_mode='append', replace_filter='id = 1'),
+        LoaderConfig(write_mode='upsert', join_cols=['id']),
+    ],
+    ids=['append', 'overwrite', 'idempotent', 'upsert'],
+)
+def test_existing_v3_table_fails_fast(sql_catalog: SqlCatalog, config: LoaderConfig) -> None:
+    register_v3_table(sql_catalog)
+
+    with pytest.raises(NotImplementedError, match=r'default\.events uses Iceberg format-version 3'):
+        load_data_to_iceberg(pa.table({'id': [1]}), TID, sql_catalog, config)
+
+    assert sql_catalog.load_table(TID).current_snapshot() is None
+
+
+def test_nanosecond_timestamps_are_stored_as_microseconds_with_warning(
+    sql_catalog: SqlCatalog,
+    loader_warnings: Callable[[], list[str]],
+) -> None:
+    ts = pa.array([1_700_000_000_123_456_789], type=pa.timestamp('ns'))
+
+    load_data_to_iceberg(pa.table({'ts': ts}), TID, sql_catalog, LoaderConfig(write_mode='append'))
+
+    stored = sql_catalog.load_table(TID).scan().to_arrow().column('ts')
+    assert stored.type == pa.timestamp('us')
+    assert stored.cast(pa.int64()).to_pylist() == [1_700_000_000_123_456]
+    assert loader_warnings() == [
+        'Timestamp precision lost for column ts (timestamp[ns] -> timestamp[us]). Values were truncated.',
+    ]

@@ -5,6 +5,7 @@ from pyiceberg.catalog import Catalog
 from pyiceberg.exceptions import NoSuchTableError
 from pyiceberg.partitioning import PartitionField, PartitionSpec
 from pyiceberg.schema import Schema
+from pyiceberg.table.metadata import SUPPORTED_TABLE_FORMAT_VERSION
 from pyiceberg.types import NestedField
 
 from iceberg_loader.core.partitioning import (
@@ -35,12 +36,24 @@ class SchemaManager:
         arrow_schema: pa.Schema,
         partition_col: str | None = None,
         table_properties: dict[str, Any] | None = None,
+        requested_format_version: Any = None,
     ) -> Any:
-        """Loads the table, or creates it if it doesn't exist."""
+        """
+        Loads the table, or creates it if it doesn't exist.
+        requested_format_version is the format-version the user set explicitly (not the library default);
+        an existing table with a different version is kept as is, with a warning.
+
+        Raises NotImplementedError if the new or existing table's format version is newer than PyIceberg can write.
+        """
         try:
-            return self.catalog.load_table(table_identifier)
+            table = self.catalog.load_table(table_identifier)
         except (FileNotFoundError, ValueError, NoSuchTableError):
             logger.info('Table %s not found, creating new table.', table_identifier)
+
+            properties = table_properties if table_properties is not None else self.table_properties
+            new_version = _parse_format_version(properties.get('format-version'))
+            if new_version is not None:
+                _ensure_writable_format_version(new_version, table_identifier)
 
             # Pre-process schema: check if partition col needs type adjustment
             adjusted_arrow_schema = self._adjust_schema_for_partitioning(arrow_schema, partition_col)
@@ -48,6 +61,10 @@ class SchemaManager:
             iceberg_schema = self._arrow_to_iceberg(adjusted_arrow_schema)
             self._create_table(table_identifier, iceberg_schema, partition_col, table_properties)
             return self.catalog.load_table(table_identifier)
+
+        _ensure_writable_format_version(table.format_version, table_identifier)
+        _warn_on_format_version_mismatch(table, requested_format_version)
+        return table
 
     def evolve_schema_if_needed(self, table: Any, batch_schema: pa.Schema) -> bool:
         """
@@ -257,3 +274,44 @@ class SchemaManager:
             arrow_type = get_arrow_type(field.field_type)
             fields.append(pa.field(field.name, arrow_type, nullable=not field.required))
         return pa.schema(fields)
+
+
+def _parse_format_version(value: Any) -> int | None:
+    """Returns value as an integer format version, or None if it is not a whole number."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    if isinstance(value, str) and value.strip().isdigit():
+        return int(value)
+    return None
+
+
+def _ensure_writable_format_version(version: int, table_identifier: tuple[str, str]) -> None:
+    if version > SUPPORTED_TABLE_FORMAT_VERSION:
+        raise NotImplementedError(
+            f'Table {".".join(table_identifier)} uses Iceberg format-version {version}, but the installed PyIceberg '
+            f'can write up to format-version {SUPPORTED_TABLE_FORMAT_VERSION}. '
+            'See https://github.com/apache/iceberg-python/issues/1551.',
+        )
+
+
+def _warn_on_format_version_mismatch(table: Any, requested: Any) -> None:
+    if requested is None:
+        return
+    requested_version = _parse_format_version(requested)
+    if requested_version is None:
+        logger.warning('Ignoring non-integer format-version %r for existing table.', requested)
+        return
+    if requested_version == table.format_version:
+        return
+    logger.warning(
+        'Table %s has format-version %s, but table_properties request %s. '
+        'format-version applies only when a table is created; the table keeps version %s.',
+        '.'.join(table.name()),
+        table.format_version,
+        requested,
+        table.format_version,
+    )

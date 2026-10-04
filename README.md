@@ -140,6 +140,13 @@ The helpers serialize dicts and lists as JSON and convert other non-null values 
 
 For timestamp columns, prefer partition transforms such as `day(ts)` or `hour(ts)`, especially when using `load_timestamp`.
 
+### Timestamp precision and format version
+
+- Iceberg format v1/v2 stores timestamps in microseconds. Nanosecond input (`pa.timestamp('ns')`) is truncated to microseconds; when values actually lose precision, the loader logs a warning naming the column.
+- `format-version` in `table_properties` applies only when the loader creates a table. Loading into an existing table never changes its version; if you set `format-version` explicitly and it differs from the table's version, the loader logs a warning. The library default (`format-version: 2`) does not trigger it.
+- PyIceberg cannot write format v3 tables yet. Requesting `format-version: 3` for a new table, or loading into an existing v3 table, raises `NotImplementedError` before anything is written.
+- A `format-version` that is not a whole number (e.g. `'v2'` or `2.9`) is ignored for existing tables, with a warning.
+
 ## Public API & Stability
 
 - Top-level exports include `LoaderConfig`, `IcebergLoader`, `load_data_to_iceberg`, `load_batches_to_iceberg`, `load_ipc_stream_to_iceberg`, `get_rest_catalog`, and `expire_snapshots`.

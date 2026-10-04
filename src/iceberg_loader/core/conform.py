@@ -22,6 +22,10 @@ class BatchConformer:
       values that cannot be cast become NULL with a warning
 
     Without schema_evolution, a buffer with mixed schemas raises pa.ArrowInvalid before any table is created.
+
+    requested_format_version is the format-version the user set explicitly (None when only the library
+    default applies). If the table already exists with a different version, a warning is logged and the
+    table keeps its version.
     """
 
     def __init__(
@@ -30,11 +34,13 @@ class BatchConformer:
         table_identifier: tuple[str, str],
         config: LoaderConfig,
         table_properties: dict[str, Any],
+        requested_format_version: Any = None,
     ):
         self._schema_manager = schema_manager
         self._table_identifier = table_identifier
         self._config = config
         self._table_properties = table_properties
+        self._requested_format_version = requested_format_version
         self.table: Any | None = None
         self.new_table_created = False
 
@@ -76,6 +82,7 @@ class BatchConformer:
                 arrow_schema,
                 self._config.partition_col,
                 table_properties=self._table_properties,
+                requested_format_version=self._requested_format_version,
             )
             if self.table.current_snapshot() is None:
                 self.new_table_created = True
