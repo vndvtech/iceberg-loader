@@ -1,0 +1,690 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Utilities for robust data loading into Apache Iceberg using PyArrow">
+      
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Architecture Map - iceberg-loader</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="light-blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#architecture-map" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="iceberg-loader" class="md-header__button md-logo" aria-label="iceberg-loader" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            iceberg-loader
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Architecture Map
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/vndvtech/iceberg-loader" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="iceberg-loader" class="md-nav__button md-logo" aria-label="iceberg-loader" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    iceberg-loader
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/vndvtech/iceberg-loader" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#system-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        System Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#component-relationships" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Component Relationships
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Flow
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data Flow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-single-table-load-load_data_to_iceberg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Single Table Load (load_data_to_iceberg)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-streaming-batch-load-load_batches_to_iceberg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Streaming Batch Load (load_batches_to_iceberg)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-ipc-stream-load-load_ipc_stream_to_iceberg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. IPC Stream Load (load_ipc_stream_to_iceberg)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-internal-batch-processing-batchconformerconform" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Internal Batch Processing (BatchConformer.conform)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#core-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Components
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Core Components">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#icebergloader" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IcebergLoader
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#batchconformer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BatchConformer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schemamanager" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SchemaManager
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#writestrategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WriteStrategy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#loaderconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LoaderConfig
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependency-direction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependency Direction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#entry-exit-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entry &amp; Exit Points
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="architecture-map">Architecture Map</h1>
+<p>How <code>iceberg-loader</code> moves Arrow data through schema handling and write strategies.</p>
+<hr />
+<h2 id="system-overview">System Overview</h2>
+<p><code>IcebergLoader</code> receives PyArrow data, uses <code>SchemaManager</code> to prepare the table, and delegates writes to a strategy for the selected mode.</p>
+<p>The main responsibilities are:
+- <code>IcebergLoader</code> buffers input and coordinates writes.
+- <code>WriteStrategy</code> selects the behavior for append, overwrite, idempotent replace, or upsert.
+- <code>LoaderConfig</code> holds validated write options in a frozen Pydantic model.
+- <code>SchemaManager</code> creates tables and adds columns when schema evolution is enabled.
+- <code>convert_table_types</code> casts Arrow data to the table schema.</p>
+<hr />
+<h2 id="component-relationships">Component Relationships</h2>
+<pre><code>┌──────────────────────────────────────────────────────┐
+│           Public API (iceberg_loader)                │
+│  load_data_to_iceberg()                               │
+│  load_batches_to_iceberg()                            │
+│  load_ipc_stream_to_iceberg()                         │
+│  IcebergLoader class                                  │
+└────────────────────┬─────────────────────────────────┘
+                     │ constructs, delegates
+┌────────────────────▼─────────────────────────────────┐
+│              IcebergLoader (Orchestrator)              │
+│  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐ │
+│  │ SchemaManager│  │ WriteStrategy│  │ LoaderConfig │ │
+│  │ (create/evolve│  │ (append/etc) │  │ (frozen VO)  │ │
+│  └─────────────┘  └──────────────┘  └──────────────┘ │
+└────────────────────┬───────────────────────────────────┘
+                     │ uses
+┌────────────────────▼─────────────────────────────────┐
+│              PyIceberg + PyArrow                       │
+│         Catalog, Table, Snapshots, Schema               │
+└────────────────────────────────────────────────────────┘
+</code></pre>
+<hr />
+<h2 id="data-flow">Data Flow</h2>
+<h3 id="1-single-table-load-load_data_to_iceberg">1. Single Table Load (<code>load_data_to_iceberg</code>)</h3>
+<pre><code>pa.Table ──► split to RecordBatches ──► IcebergLoader.load_data() ──► load_data_batches() ──► WriteStrategy.write()
+</code></pre>
+<h3 id="2-streaming-batch-load-load_batches_to_iceberg">2. Streaming Batch Load (<code>load_batches_to_iceberg</code>)</h3>
+<pre><code>Iterator[RecordBatch] ──► buffer up to commit_interval ──► BatchConformer.conform() ──► WriteStrategy.write()
+</code></pre>
+<h3 id="3-ipc-stream-load-load_ipc_stream_to_iceberg">3. IPC Stream Load (<code>load_ipc_stream_to_iceberg</code>)</h3>
+<pre><code>IPC stream file/socket ──► pa.ipc.open_stream() ──► RecordBatchReader ──► load_data_batches()
+</code></pre>
+<h3 id="4-internal-batch-processing-batchconformerconform">4. Internal Batch Processing (<code>BatchConformer.conform</code>)</h3>
+<pre><code>buffer of RecordBatches
+       │
+       ├─ add load_timestamp column (config.load_timestamp)
+       ├─ without schema_evolution: concat (mixed schemas → pa.ArrowInvalid)
+       ├─ ensure table exists (first call only; partition spec sees the load timestamp column)
+       ├─ evolve: load timestamp column; with schema_evolution, every distinct batch schema
+       └─ convert_table_types() — cast to target Arrow schema (warns when timestamps lose precision, e.g. ns → us)
+then IcebergLoader: strategy.write(conformer.table, data, is_first_write)
+</code></pre>
+<hr />
+<h2 id="core-components">Core Components</h2>
+<h3 id="icebergloader"><code>IcebergLoader</code></h3>
+<p><strong>Role</strong>: Facade / orchestrator. Manages catalog, config resolution, buffering, and delegates schema + write operations.</p>
+<h3 id="batchconformer"><code>BatchConformer</code></h3>
+<p><strong>Role</strong>: Per-load conform step. Owns the target table and turns each batch buffer into a table-shaped <code>pa.Table</code>.</p>
+<h3 id="schemamanager"><code>SchemaManager</code></h3>
+<p><strong>Role</strong>: Table lifecycle + schema evolution.
+- <code>ensure_table_exists()</code> — load or create table with partition spec; for an existing table, warns if <code>format-version</code> set explicitly by the user differs from the table's version (the table is not upgraded); raises <code>NotImplementedError</code> if the new or existing table's format version is newer than PyIceberg can write
+- <code>evolve_schema_if_needed()</code> — add missing top-level columns
+- <code>_arrow_to_iceberg()</code> / <code>_iceberg_to_arrow()</code> — bidirectional schema conversion</p>
+<h3 id="writestrategy"><code>WriteStrategy</code></h3>
+<p><strong>Role</strong>: Abstract interface for writing data.
+- <code>AppendStrategy</code> — simple append
+- <code>OverwriteStrategy</code> — overwrite on first batch, then append
+- <code>IdempotentStrategy</code> — delete rows via <code>replace_filter</code>, then append
+- <code>UpsertStrategy</code> — PyIceberg <code>table.upsert()</code> merge-into</p>
+<h3 id="loaderconfig"><code>LoaderConfig</code></h3>
+<p><strong>Role</strong>: Immutable configuration model. Validates:
+- partition expressions (<code>day(ts)</code>, <code>bucket(16, id)</code>)
+- mutually exclusive options (<code>upsert</code> + <code>replace_filter</code>)
+- identity partition on <code>_load_dttm</code> column (rejected)</p>
+<hr />
+<h2 id="dependency-direction">Dependency Direction</h2>
+<pre><code>Public API ──► IcebergLoader ──► core: strategies, schema, config
+                IcebergLoader ──► utils: arrow (convert_table_types)
+                IcebergLoader ──► services: logging
+                core/         ──► services: logging
+                core/         ──► utils: types, partitioning
+                utils/        ──► services: logging
+                services/     ◄── (logging and maintenance are bottom)
+</code></pre>
+<hr />
+<h2 id="entry-exit-points">Entry &amp; Exit Points</h2>
+<table>
+<thead>
+<tr>
+<th>Entry Point</th>
+<th>Purpose</th>
+<th>Returns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>load_data_to_iceberg(table, ...)</code></td>
+<td>One-shot in-memory table</td>
+<td><code>dict</code> with rows_loaded, snapshot_id, etc.</td>
+</tr>
+<tr>
+<td><code>load_batches_to_iceberg(iterator, ...)</code></td>
+<td>Streaming batches</td>
+<td><code>dict</code></td>
+</tr>
+<tr>
+<td><code>load_ipc_stream_to_iceberg(stream, ...)</code></td>
+<td>IPC stream source</td>
+<td><code>dict</code></td>
+</tr>
+<tr>
+<td><code>IcebergLoader.load_data()</code></td>
+<td>Stateful reuse</td>
+<td><code>dict</code></td>
+</tr>
+<tr>
+<td><code>IcebergLoader.load_data_batches()</code></td>
+<td>Batch orchestration</td>
+<td><code>dict</code></td>
+</tr>
+<tr>
+<td><code>expire_snapshots(table, ...)</code></td>
+<td>Maintenance utility</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td><code>iceberg_loader.services.logging.configure_logging(...)</code></td>
+<td>Initialize logger (not top-level exported)</td>
+<td><code>Logger</code></td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
